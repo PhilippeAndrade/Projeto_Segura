@@ -3,10 +3,22 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField, SelectField
 from wtforms.validators import DataRequired, Length
 import os
+import mysql.connector
+
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
+conexao = mysql.connector.connect(host='localhost',
+                                  database='segura',
+                                  user='root',
+                                  password='admin')
+
+if conexao.is_connected():
+    print('conectado ao banco de dados com sucesso!')
+    cursor = conexao.cursor()
+conexao.close()
+cursor.close()
 # Configuração do formulário com Flask-WTF
 class RegistrationForm(FlaskForm):
     username = StringField('Nome de Usuário', validators=[DataRequired(), Length(min=4, max=25)])
