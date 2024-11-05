@@ -1,28 +1,53 @@
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dashboard</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-        <style>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+        /* Ajustes para centralização vertical */
+        .dashboard-container {
+            margin-top: 20vh;
+        }
+        
+        /* Ajustes para dispositivos menores */
+        @media (max-width: 768px) {
             .dashboard-container {
-                margin-top: 20vh; /* Posiciona o conteúdo centralizado verticalmente */
+                margin-top: 10vh;
+            }
+            h1 {
+                font-size: 1.8rem;
             }
             .btn-logout {
-                margin-top: 20px; /* Espaço superior para o botão */
+                font-size: 1rem;
+                padding: 10px 20px;
             }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-6 col-sm-8 col-10 dashboard-container text-center">
-                    <h1 class="mb-4">Parabéns, você está logado!</h1>
-                    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-logout">Logout</a>
-                </div>
+        }
+        
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 1.5rem;
+            }
+            .btn-logout {
+                font-size: 0.9rem;
+                padding: 8px 16px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-md-6 col-sm-8 col-10 dashboard-container text-center">
+                <h1 class="mb-4">Parabéns, você está logado!</h1>
+                <a href="{{ url_for('logout') }}" class="btn btn-danger btn-lg btn-logout">Logout</a>
             </div>
         </div>
-    </body>
-    </html>
-    '''
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
