@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastro - Controladora de APs Segura</title>
+    <title>Login - Controladora de APs Segura</title>
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <style>
@@ -31,10 +31,17 @@
             position: absolute; /* Posiciona o ícone */
             right: 10px; /* Distância da borda direita */
             top: 50%; /* Centraliza verticalmente */
-            transform: translateY(-50%); /* Ajusta para centralizar */
+            transform: translateY(0%); /* Ajusta para centralizar */
             cursor: pointer; /* Muda o cursor para indicar que é clicável */
             font-size: 2rem; /* Aumenta o tamanho do ícone */
             line-height: 1; /* Ajusta o alinhamento */
+        }
+        /* Estilo personalizado para alerta de erro com sombra vermelha */
+        .alert-danger {
+            background-color: #f8d7da; /* Vermelho claro */
+            color: #721c24; /* Texto em vermelho escuro */
+            border-color: #f5c6cb; /* Borda de alerta */
+            box-shadow: 0px 4px 8px rgba(114, 28, 36, 0.4); /* Sombra vermelha */
         }
     </style>
 </head>
@@ -51,7 +58,7 @@
                     
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
-                            <ul class="list-unstyled">
+                            <ul class="list-unstyled" id="flashes">
                                 {% for category, message in messages %}
                                     <li class="alert alert-{{ category }}">{{ message }}</li>
                                 {% endfor %}
@@ -59,19 +66,19 @@
                         {% endif %}
                     {% endwith %}
                     
-                    <form method="POST" action="{{ url_for('register') }}">
+                    <form method="POST" action="{{ url_for('login') }}">
                         {{ form.hidden_tag() }}
                         
                         <div class="form-group">
                             {{ form.username.label(class="form-label") }}
-                            {{ form.username(class="form-control form-control-lg", placeholder="Digite seu nome de usuário") }}
+                            {{ form.username(class="form-control form-control-lg", placeholder="Username", required=True, autofocus=True) }}
                         </div>
 
                         <div class="form-group password-container">
                             {{ form.password.label(class="form-label") }}
-                            {{ form.password(class="form-control form-control-lg", placeholder="Digite sua senha", id="password") }}
+                            {{ form.password(class="form-control form-control-lg", placeholder="Password", id="password", required=True) }}
                             <span class="toggle-password" onclick="togglePassword()">
-                                👁️
+                                🙉
                             </span>
                         </div>
                         <br><br>
@@ -96,9 +103,17 @@
                 toggleIcon.innerHTML = '🙈'; // Ícone de olho cortado
             } else {
                 passwordField.type = 'password';
-                toggleIcon.innerHTML = '👁️'; // Ícone de olho aberto
+                toggleIcon.innerHTML = '🙉'; // Ícone de olho aberto
             }
         }
+
+        // Remove os flashes após 2 segundos
+        setTimeout(() => {
+            const flashes = document.getElementById('flashes');
+            if (flashes) {
+                flashes.style.display = 'none';
+            }
+        }, 2000); // 2000 milissegundos = 2 segundos
     </script>
 </body>
 </html>
