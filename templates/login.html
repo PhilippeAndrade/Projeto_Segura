@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - Controladora de APs Segura</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
+    <style>
+        body {
+            background-color: #C0C8CE; /* Cor de fundo */
+            background-image: url('{{ url_for("static", filename="background-image.jpg") }}'); /* Caminho da imagem de fundo */
+            background-size: cover; /* Faz a imagem cobrir toda a tela */
+            background-position: center; /* Centraliza a imagem */
+            background-repeat: no-repeat; /* Não repete a imagem */
+        }
+        .logo-container {
+            text-align: center; /* Centraliza a logo */
+            margin-bottom: 30px; /* Espaçamento inferior */
+        }
+        .form-container {
+            background-color: white; /* Fundo branco para o formulário */
+            padding: 20px; /* Espaçamento interno */
+            border-radius: 5px; /* Cantos arredondados */
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Sombra para dar destaque */
+        }
+        .password-container {
+            position: relative; /* Permite o posicionamento do ícone */
+        }
+        .toggle-password {
+            position: absolute; /* Posiciona o ícone */
+            right: 10px; /* Distância da borda direita */
+            top: 50%; /* Centraliza verticalmente */
+            transform: translateY(-50%); /* Ajusta para centralizar */
+            cursor: pointer; /* Muda o cursor para indicar que é clicável */
+            font-size: 2rem; /* Aumenta o tamanho do ícone */
+            line-height: 1; /* Ajusta o alinhamento */
+        }
+        /* Estilo personalizado para alerta de erro com sombra vermelha */
+        .alert-danger {
+            background-color: #f8d7da; /* Vermelho claro */
+            color: #721c24; /* Texto em vermelho escuro */
+            border-color: #f5c6cb; /* Borda de alerta */
+            box-shadow: 0px 4px 8px rgba(114, 28, 36, 0.4); /* Sombra vermelha */
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid">
+        <div class="row justify-content-center">
+            <div class="col-md-3 col-sm-5 col-9">
+                <div class="logo-container">
+                    <img src="{{ url_for('static', filename='LOGO_SEGURA.png') }}" alt="Logo Segura" class="logo mb-4 img-fluid">
+                </div>
+                <div class="form-container text-center">
+                    <h2>Faça seu Login</h2>
+                    <br><br>
+                    
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <ul class="list-unstyled" id="flashes">
+                                {% for category, message in messages %}
+                                    <li class="alert alert-{{ category }}">{{ message }}</li>
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    {% endwith %}
+                    
+                    <form method="POST" action="{{ url_for('login') }}">
+                        {{ form.hidden_tag() }}
+                        
+                        <div class="form-group">
+                            {{ form.username.label(class="form-label") }}
+                            {{ form.username(class="form-control form-control-lg", placeholder="Digite seu nome de usuário", required=True, autofocus=True) }}
+                        </div>
+
+                        <div class="form-group password-container">
+                            {{ form.password.label(class="form-label") }}
+                            {{ form.password(class="form-control form-control-lg", placeholder="Digite sua senha", id="password", required=True) }}
+                            <span class="toggle-password" onclick="togglePassword()">
+                                👁️
+                            </span>
+                        </div>
+                        <br><br>
+                        <div class="form-group">
+                            {{ form.submit(class="btn btn-primary btn-block btn-lg") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function togglePassword() {
+            const passwordField = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.innerHTML = '🙈'; // Ícone de olho cortado
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.innerHTML = '🙉'; // Ícone de olho aberto
+            }
+        }
+
+        // Remove os flashes após 2 segundos
+        setTimeout(() => {
+            const flashes = document.getElementById('flashes');
+            if (flashes) {
+                flashes.style.display = 'none';
+            }
+        }, 2000); // 2000 milissegundos = 2 segundos
+    </script>
+</body>
+</html>
