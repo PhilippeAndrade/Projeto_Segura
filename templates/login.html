@@ -8,61 +8,57 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <style>
         body {
-            background-color: #C0C8CE; /* Cor de fundo */
-            background-image: url('{{ url_for("static", filename="background-image.jpg") }}'); /* Caminho da imagem de fundo */
-            background-size: cover; /* Faz a imagem cobrir toda a tela */
-            background-position: center; /* Centraliza a imagem */
-            background-repeat: no-repeat; /* Não repete a imagem */
+            background-color: #C0C8CE;
+            background-image: url('{{ url_for("static", filename="background-image.jpg") }}');
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
         }
         .logo-container {
-            text-align: center; /* Centraliza a logo */
-            margin-bottom: 30px; /* Espaçamento inferior */
+            text-align: center;
+            margin-bottom: 20px;
         }
         .form-container {
-            background-color: white; /* Fundo branco para o formulário */
-            padding: 20px; /* Espaçamento interno */
-            border-radius: 5px; /* Cantos arredondados */
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1); /* Sombra para dar destaque */
+            background-color: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
         .password-container {
-            position: relative; /* Permite o posicionamento do ícone */
+            position: relative;
         }
         .toggle-password {
-            position: absolute; /* Posiciona o ícone */
-            right: 10px; /* Distância da borda direita */
-            top: 50%; /* Centraliza verticalmente */
-            transform: translateY(-50%); /* Ajusta para centralizar */
-            cursor: pointer; /* Muda o cursor para indicar que é clicável */
-            font-size: 2rem; /* Aumenta o tamanho do ícone */
-            line-height: 1; /* Ajusta o alinhamento */
-        }
-        /* Estilo personalizado para alerta de erro com sombra vermelha */
-        .alert-danger {
-            background-color: #f8d7da; /* Vermelho claro */
-            color: #721c24; /* Texto em vermelho escuro */
-            border-color: #f5c6cb; /* Borda de alerta */
-            box-shadow: 0px 4px 8px rgba(114, 28, 36, 0.4); /* Sombra vermelha */
+            position: absolute;
+            right: 10px;
+            top: 50%;
+            transform: translateY(0%);
+            cursor: pointer;
+            font-size: 1.2rem;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid">
-        <div class="row justify-content-center">
-            <div class="col-md-3 col-sm-5 col-9">
+    <div class="container">
+        <div class="row justify-content-center align-items-center min-vh-100">
+            <div class="col-lg-4 col-md-6 col-sm-8 col-10">
                 <div class="logo-container">
                     <img src="{{ url_for('static', filename='LOGO_SEGURA.png') }}" alt="Logo Segura" class="logo mb-4 img-fluid">
                 </div>
                 <div class="form-container text-center">
-                    <h2>Faça seu Login</h2>
-                    <br><br>
+                    <h2 class="mb-4">Faça seu Login</h2>
                     
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
-                            <ul class="list-unstyled" id="flashes">
-                                {% for category, message in messages %}
-                                    <li class="alert alert-{{ category }}">{{ message }}</li>
-                                {% endfor %}
-                            </ul>
+                            <div class="alert alert-dismissible fade show alert-danger" role="alert">
+                                <ul class="mb-0 list-unstyled" id="flashes">
+                                    {% for category, message in messages %}
+                                        <li>{{ message }}</li>
+                                    {% endfor %}
+                                </ul>
+                                <button type="button" class="close" data-dismiss="alert" aria-label="Close">
+                                    <span aria-hidden="true">&times;</span>
+                                </button>
+                            </div>
                         {% endif %}
                     {% endwith %}
                     
@@ -71,20 +67,16 @@
                         
                         <div class="form-group">
                             {{ form.username.label(class="form-label") }}
-                            {{ form.username(class="form-control form-control-lg", placeholder="Digite seu nome de usuário", required=True, autofocus=True) }}
+                            {{ form.username(class="form-control form-control-lg", placeholder="Usuário", required=True, autofocus=True) }}
                         </div>
 
                         <div class="form-group password-container">
                             {{ form.password.label(class="form-label") }}
-                            {{ form.password(class="form-control form-control-lg", placeholder="Digite sua senha", id="password", required=True) }}
-                            <span class="toggle-password" onclick="togglePassword()">
-                                👁️
-                            </span>
+                            {{ form.password(class="form-control form-control-lg", placeholder="Senha", id="password", required=True) }}
+                            <span class="toggle-password" onclick="togglePassword()">🙉</span>
                         </div>
-                        <br><br>
-                        <div class="form-group">
-                            {{ form.submit(class="btn btn-primary btn-block btn-lg") }}
-                        </div>
+                        
+                        <button type="submit" class="btn btn-primary btn-lg btn-block mt-3">{{ form.submit.label.text }}</button>
                     </form>
                 </div>
             </div>
@@ -100,20 +92,20 @@
             const toggleIcon = document.querySelector('.toggle-password');
             if (passwordField.type === 'password') {
                 passwordField.type = 'text';
-                toggleIcon.innerHTML = '🙈'; // Ícone de olho cortado
+                toggleIcon.textContent = '🙈';
             } else {
                 passwordField.type = 'password';
-                toggleIcon.innerHTML = '🙉'; // Ícone de olho aberto
+                toggleIcon.textContent = '🙉';
             }
         }
 
-        // Remove os flashes após 2 segundos
+        // Oculta os flashes após 3 segundos
         setTimeout(() => {
             const flashes = document.getElementById('flashes');
             if (flashes) {
-                flashes.style.display = 'none';
+                flashes.closest('.alert').style.display = 'none';
             }
-        }, 2000); // 2000 milissegundos = 2 segundos
+        }, 3000);
     </script>
 </body>
 </html>

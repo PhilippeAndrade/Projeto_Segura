@@ -1,31 +1,116 @@
-@app.route('/dashboard')
-def dashboard():
-    return '''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dashboard</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-        <style>
-            .dashboard-container {
-                margin-top: 20vh; /* Posiciona o conteúdo centralizado verticalmente */
-            }
-            .btn-logout {
-                margin-top: 20px; /* Espaço superior para o botão */
-            }
-        </style>
-    </head>
-    <body>
-        <div class="container">
-            <div class="row justify-content-center">
-                <div class="col-md-6 col-sm-8 col-10 dashboard-container text-center">
-                    <h1 class="mb-4">Parabéns, você está logado!</h1>
-                    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-logout">Logout</a>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gerenciamento de Usuários</title>
+    <!-- Link do Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+        }
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: white;
+            margin: 10px 0;
+        }
+        .sidebar a:hover {
+            color: #ffc107;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar col-md-2">
+        <h2 class="text-white text-center">Menu</h2>
+        <a href="#" class="btn btn-dark btn-block" data-toggle="modal" data-target="#createUserModal">Criar Usuário</a>
+        <a href="#" class="btn btn-dark btn-block">Visualizar Usuários</a>
+        <a href="#" class="btn btn-dark btn-block">Configurações</a>
+        <a href="#" class="btn btn-dark btn-block">Sair</a>
+    </div>
+    <div class="main-content col-md-10">
+        <h1 class="text-center">Dashboard</h1>
+        <div class="container mt-4">
+            <h2>Bem-vindo ao Gerenciamento de Usuários</h2>
+            <p>Escolha uma opção no menu à esquerda para começar.</p>
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="#" class="btn btn-primary btn-lg btn-block" data-toggle="modal" data-target="#createUserModal">Criar Novo Usuário</a>
+                </div>
+                <div class="col-md-4">
+                    <a href="#" class="btn btn-success btn-lg btn-block">Visualizar Usuários</a>
+                </div>
+                <div class="col-md-4">
+                    <a href="#" class="btn btn-warning btn-lg btn-block">Configurações</a>
                 </div>
             </div>
         </div>
-    </body>
-    </html>
-    '''
+    </div>
+
+    <!-- Modal para Criar Usuário -->
+    <div class="modal fade" id="createUserModal" tabindex="-1" role="dialog" aria-labelledby="createUserModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="createUserModalLabel">Criar Novo Usuário</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <form id="createUserForm">
+                        <div class="form-group">
+                            <label for="username">Nome de Usuário</label>
+                            <input type="text" class="form-control" id="username" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="email">Email</label>
+                            <input type="email" class="form-control" id="email" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="password">Senha</label>
+                            <input type="password" class="form-control" id="password" required>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                    <button type="button" class="btn btn-primary" id="submitUserBtn">Criar Usuário</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link do Bootstrap JS e dependências -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById('submitUserBtn').addEventListener('click', function() {
+            // Aqui você pode adicionar a lógica para enviar os dados do formulário para o servidor
+            const username = document.getElementById('username').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            // Simulação de criação de usuário
+            alert(`Usuário criado:\nNome: ${username}\nEmail: ${email}`);
+            // Limpar o formulário
+            document.getElementById('createUserForm').reset();
+            // Fechar o modal
+            $('#createUserModal').modal('hide');
+        });
+    </script>
+</body>
+</html>
