@@ -8,11 +8,23 @@ def dashboard():
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
         <title>Dashboard</title>
         <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+        <style>
+            .dashboard-container {
+                margin-top: 20vh; /* Posiciona o conteúdo centralizado verticalmente */
+            }
+            .btn-logout {
+                margin-top: 20px; /* Espaço superior para o botão */
+            }
+        </style>
     </head>
     <body>
-        <div class="container text-center">
-            <h1>Parabéns, você está logado!</h1>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+        <div class="container">
+            <div class="row justify-content-center">
+                <div class="col-md-6 col-sm-8 col-10 dashboard-container text-center">
+                    <h1 class="mb-4">Parabéns, você está logado!</h1>
+                    <a href="{{ url_for('logout') }}" class="btn btn-danger btn-logout">Logout</a>
+                </div>
+            </div>
         </div>
     </body>
     </html>
