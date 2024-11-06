@@ -5,46 +5,113 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deletar Usuários</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
+            display: flex;
+            min-height: 100vh;
             background-color: #f8f9fa;
         }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            transition: all 0.3s ease;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
         .container {
-            margin-top: 30px;
+            flex-grow: 1;
+            padding: 30px;
+        }
+        .success-message {
+            color: green;
+            font-size: 1rem;
+            display: none;
+            margin-bottom: 10px;
         }
     </style>
 </head>
 <body>
 
-<div class="container">
-    <h2>Deletar Usuários</h2>
-    <form action="{{ url_for('deletar_usuarios') }}" method="POST">
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Nome de Usuário</th>
-                    <th>Selecionar para Excluir</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for usuario in usuarios %}
-                <tr>
-                    <td>{{ usuario[1] }}</td>  <!-- Exibe o nome do usuário -->
-                    <td>
-                        <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}">  <!-- Checkbox para selecionar o usuário -->
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
-        <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>  <!-- Voltar para a criação de usuário -->
-    </form>
-</div>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/createuser"><i class="fas fa-user-plus"></i> Cadastrar Usuário</a>
+        <a href="/visualizarusuarios"><i class="fas fa-eye"></i> Visualizar Usuários</a>
+        <a href="/alterarusuarios"><i class="fas fa-edit"></i> Alterar Usuários</a>
+        <a href="/deletarusuarios" class="active"><i class="fas fa-user-minus"></i> Deletar Usuários</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
 
-<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <!-- Content -->
+    <div class="container">
+        <h2 class="text-center mb-4">Deletar Usuários</h2>
+
+        <!-- Mensagem de sucesso -->
+        {% with messages = get_flashed_messages() %}
+            {% if messages %}
+                <div class="alert alert-success success-message">
+                    {{ messages[0] }}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        <form action="{{ url_for('deletar_usuarios') }}" method="POST">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome de Usuário</th>
+                        <th>Selecionar para Excluir</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario[1] }}</td>  <!-- Exibe o nome do usuário -->
+                        <td>
+                            <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}">  <!-- Checkbox para selecionar o usuário -->
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+            <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>  <!-- Voltar para a criação de usuário -->
+        </form>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Sidebar Active Link Highlight
+        document.querySelectorAll('.sidebar a').forEach(link => {
+            link.addEventListener('click', () => {
+                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
+                link.classList.add('active');
+            });
+        });
+    </script>
 
 </body>
 </html>

@@ -19,6 +19,7 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            transition: all 0.3s ease;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -32,7 +33,7 @@
             transition: background 0.3s ease;
             text-decoration: none;
         }
-        .sidebar a:hover {
+        .sidebar a:hover, .sidebar a.active {
             background-color: #495057;
             color: #ffc107;
         }
@@ -59,6 +60,11 @@
             background-color: #0056b3;
             border-color: #0056b3;
         }
+        .error-message {
+            color: red;
+            font-size: 0.9rem;
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -66,8 +72,8 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
-        <a href="#" data-toggle="modal" data-target="#createUserModal"><i class="fas fa-user-plus"></i> Cadastrar Usuário</a>
-        <a href="/visualizarusuarios"><i class="fas fa-eye"></i> Visualizar Usuários</a> <!-- Esse link está correto -->
+        <a href="#" data-toggle="modal" data-target="#createUserModal" class="active"><i class="fas fa-user-plus" ></i> Cadastrar Usuário</a>
+        <a href="/visualizarusuarios" ><i class="fas fa-eye"></i> Visualizar Usuários</a>
         <a href="/alterarusuarios"><i class="fas fa-edit"></i> Alterar Usuários</a>
         <a href="/deletarusuarios"><i class="fas fa-user-minus"></i> Deletar Usuários</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
@@ -77,15 +83,17 @@
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Criar Novo Usuário</h2>
-            <form method="POST" action="{{ url_for('create_user') }}">
+            <form id="userForm" method="POST" action="{{ url_for('create_user') }}">
                 {{ form.hidden_tag() }}
                 <div class="form-group">
                     {{ form.username.label(class="font-weight-bold") }}
-                    {{ form.username(class="form-control", placeholder="Nome de Usuário") }}
+                    {{ form.username(class="form-control", placeholder="Nome de Usuário", id="username") }}
+                    <small class="error-message" id="usernameError">O nome de usuário é obrigatório.</small>
                 </div>
                 <div class="form-group">
                     {{ form.password.label(class="font-weight-bold") }}
-                    {{ form.password(class="form-control", placeholder="Senha") }}
+                    {{ form.password(class="form-control", placeholder="Senha", id="password") }}
+                    <small class="error-message" id="passwordError">A senha é obrigatória e deve ter pelo menos 6 caracteres.</small>
                 </div>
                 <div class="form-group text-center">
                     {{ form.submit(class="btn btn-primary btn-block") }}
@@ -98,5 +106,48 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
+    <!-- Validação e Animações -->
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const usernameField = document.getElementById("username");
+            const passwordField = document.getElementById("password");
+            const usernameError = document.getElementById("usernameError");
+            const passwordError = document.getElementById("passwordError");
+            const userForm = document.getElementById("userForm");
+
+            // Validação dinâmica do formulário
+            userForm.addEventListener("submit", function(event) {
+                let valid = true;
+
+                if (usernameField.value.trim() === "") {
+                    usernameError.style.display = "block";
+                    valid = false;
+                } else {
+                    usernameError.style.display = "none";
+                }
+
+                if (passwordField.value.trim().length < 6) {
+                    passwordError.style.display = "block";
+                    valid = false;
+                } else {
+                    passwordError.style.display = "none";
+                }
+
+                if (!valid) {
+                    event.preventDefault();
+                }
+            });
+
+            // Animação de expansão da sidebar
+            const sidebarLinks = document.querySelectorAll(".sidebar a");
+            sidebarLinks.forEach(link => {
+                link.addEventListener("click", () => {
+                    sidebarLinks.forEach(l => l.classList.remove("active"));
+                    link.classList.add("active");
+                });
+            });
+        });
+    </script>
 </body>
 </html>

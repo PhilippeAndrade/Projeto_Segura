@@ -4,6 +4,8 @@ from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length
 import os
+import bcrypt
+
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -36,13 +38,26 @@ def login():
         username = form.username.data
         password = form.password.data
         
-        if username == 'cereja' and password == '123456':
-            session['username'] = username
-            return redirect(url_for('dashboard'))
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT password FROM usuarios WHERE username = %s", (username,))  # Seleciona a senha do usuário
+        bd_password = cursor.fetchone()  # Obtém a senha do banco (deve ser um único resultado)
+        cursor.close()
+        
+        if bd_password:  # Se o usuário existe
+            senha_hashed = bd_password[0]  # Pega o hash da senha
+            print(f'Senha digitada: {password}')  # Para depuração
+            print(f'Senha hash armazenada: {senha_hashed}')  # Para depuração
+            
+            if verificar_senha(password, senha_hashed):  # Verifica se a senha está correta
+                session['username'] = username
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Senha incorreta!', 'danger')  # Mensagem específica para senha incorreta
         else:
-            flash('Login não encontrado!', 'danger')
+            flash('Usuário não encontrado!', 'danger')  # Mensagem específica para usuário não encontrado
     
     return render_template('login.html', form=form)
+
 
 @app.route('/dashboard')
 def dashboard():
@@ -58,11 +73,15 @@ def create_user():
     if request.method == 'POST' and form.validate_on_submit():
         username = form.username.data
         password = form.password.data
-        
+
         if username and password:
+            #Encrypta a senha
+            password_hashed = hash_senha(password)
+            
+
             try:
                 cursor = mysql.connection.cursor()
-                cursor.execute("INSERT INTO usuarios (username, password) VALUES (%s, %s)", (username, password))
+                cursor.execute("INSERT INTO usuarios (username, password) VALUES (%s, %s)", (username, password_hashed))
                 mysql.connection.commit()
                 cursor.close()
                 
@@ -74,6 +93,18 @@ def create_user():
             flash('Todos os campos são obrigatórios.', 'danger')
 
     return render_template('createuser.html', form=form)  # Renderiza o formulário
+
+
+def hash_senha(senha):
+    # Gera um "salt"
+    salt = bcrypt.gensalt()
+    # Gera o hash da senha
+    senha_hashed = bcrypt.hashpw(senha.encode(), salt)
+    return senha_hashed.decode('utf-8')  # Armazena como string
+
+def verificar_senha(senha, senha_hashed):
+    # Verifica se a senha corresponde ao hash armazenado
+    return bcrypt.checkpw(senha.encode(), senha_hashed.encode())  # Converte senha_hashed para bytes
 
 @app.route('/logout')
 def logout():
@@ -97,9 +128,13 @@ def alterar_usuarios():
         nova_senha = request.form.get('nova_senha')
 
         if user_id and nova_senha:
+            # Gera o hash da nova senha
+            nova_senha_hashed = hash_senha(nova_senha)
+
             try:
                 cursor = mysql.connection.cursor()
-                cursor.execute("UPDATE usuarios SET password = %s WHERE id = %s", (nova_senha, user_id))
+                # Atualiza o campo de senha com o hash gerado
+                cursor.execute("UPDATE usuarios SET password = %s WHERE id = %s", (nova_senha_hashed, user_id))
                 mysql.connection.commit()
                 cursor.close()
 
