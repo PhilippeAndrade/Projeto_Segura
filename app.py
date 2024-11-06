@@ -5,7 +5,7 @@ from wtforms import StringField, PasswordField, SubmitField
 from wtforms.validators import DataRequired, Length
 import os
 import bcrypt
-
+from functools import wraps
 
 app = Flask(__name__)
 app.secret_key = os.urandom(24)
@@ -23,6 +23,16 @@ class UserForm(FlaskForm):
     username = StringField('Nome de Usuário', validators=[DataRequired(), Length(min=4, max=25)])
     password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])
     submit = SubmitField('Criar Usuário')
+
+# Decorador para verificar se o usuário está logado
+def login_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'username' not in session:
+            flash('Você precisa fazer login para acessar essa página.', 'danger')
+            return redirect(url_for('login'))
+        return f(*args, **kwargs)
+    return decorated_function
 
 @app.route('/')
 def home():
@@ -58,16 +68,13 @@ def login():
     
     return render_template('login.html', form=form)
 
-
 @app.route('/dashboard')
+@login_required
 def dashboard():
-    if 'username' not in session:
-        flash('Você precisa fazer login para acessar essa página.', 'danger')
-        return redirect(url_for('login'))
-    
     return render_template('dashboard.html')
 
 @app.route('/createuser', methods=['GET', 'POST'])
+@login_required
 def create_user():
     form = UserForm()  # Instancia o formulário
     if request.method == 'POST' and form.validate_on_submit():
@@ -75,10 +82,9 @@ def create_user():
         password = form.password.data
 
         if username and password:
-            #Encrypta a senha
+            # Encrypta a senha
             password_hashed = hash_senha(password)
             
-
             try:
                 cursor = mysql.connection.cursor()
                 cursor.execute("INSERT INTO usuarios (username, password) VALUES (%s, %s)", (username, password_hashed))
@@ -92,8 +98,7 @@ def create_user():
         else:
             flash('Todos os campos são obrigatórios.', 'danger')
 
-    return render_template('createuser.html', form=form)  # Renderiza o formulário
-
+    return render_template('createuser.html', form=form)
 
 def hash_senha(senha):
     # Gera um "salt"
@@ -113,11 +118,8 @@ def logout():
     return redirect(url_for('login'))
 
 @app.route('/alterarusuarios', methods=['GET', 'POST'])
+@login_required
 def alterar_usuarios():
-    if 'username' not in session:
-        flash('Você precisa fazer login para acessar essa página.', 'danger')
-        return redirect(url_for('login'))
-
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT * FROM usuarios")  # Seleciona todos os usuários do banco
     usuarios = cursor.fetchall()  # Retorna todos os usuários
@@ -146,11 +148,8 @@ def alterar_usuarios():
     return render_template('alterarusuarios.html', usuarios=usuarios)
 
 @app.route('/visualizarusuarios')
+@login_required
 def visualizar_usuarios():
-    if 'username' not in session:
-        flash('Você precisa fazer login para acessar essa página.', 'danger')
-        return redirect(url_for('login'))
-
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT * FROM usuarios")  # Seleciona todos os usuários do banco
     usuarios = cursor.fetchall()  # Retorna todos os usuários
@@ -159,11 +158,8 @@ def visualizar_usuarios():
     return render_template('visualizarusuarios.html', usuarios=usuarios)
 
 @app.route('/deletarusuarios', methods=['GET', 'POST'])
+@login_required
 def deletar_usuarios():
-    if 'username' not in session:
-        flash('Você precisa fazer login para acessar essa página.', 'danger')
-        return redirect(url_for('login'))
-
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT * FROM usuarios")  # Seleciona todos os usuários
     usuarios = cursor.fetchall()  # Retorna todos os usuários
@@ -186,7 +182,6 @@ def deletar_usuarios():
                 flash(f'Erro ao excluir usuário: {str(e)}', 'danger')
 
     return render_template('deletarusuarios.html', usuarios=usuarios)
-
 
 @app.errorhandler(404)
 def page_not_found(e):
