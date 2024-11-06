@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Deletar Usuários</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+        .container {
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h2>Deletar Usuários</h2>
+    <form action="{{ url_for('deletar_usuarios') }}" method="POST">
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Nome de Usuário</th>
+                    <th>Selecionar para Excluir</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for usuario in usuarios %}
+                <tr>
+                    <td>{{ usuario[1] }}</td>  <!-- Exibe o nome do usuário -->
+                    <td>
+                        <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}">  <!-- Checkbox para selecionar o usuário -->
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+        <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>  <!-- Voltar para a criação de usuário -->
+    </form>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+</body>
+</html>

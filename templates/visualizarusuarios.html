@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Usuários</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+
+<div class="container mt-4">
+    <h2 class="text-center mb-4">Usuários Cadastrados</h2>
+    <table class="table table-bordered">
+        <thead>
+            <tr>
+                <th>Nome de Usuário</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for usuario in usuarios %}
+            <tr>
+                <td>{{ usuario[1] }}</td>  <!-- Exibe apenas o nome de usuário -->
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>
+</div>
+
+</body>
+</html>

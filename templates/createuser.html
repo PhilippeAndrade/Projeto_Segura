@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Gerenciamento de Usuários</title>
-    <!-- Link do Bootstrap CSS -->
+    <title>Criar Usuário</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
@@ -44,8 +43,21 @@
         .content h2 {
             color: #343a40;
         }
-        .card {
-            margin-bottom: 20px;
+        .form-container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
         }
     </style>
 </head>
@@ -54,34 +66,35 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
-        <a href="/createuser"><i class="fas fa-user-plus"></i> Criar Usuário</a>
-        <a href="/visualizarusuarios"><i class="fas fa-eye"></i> Visualizar Usuários</a>
+        <a href="#" data-toggle="modal" data-target="#createUserModal"><i class="fas fa-user-plus"></i> Cadastrar Usuário</a>
+        <a href="/visualizarusuarios"><i class="fas fa-eye"></i> Visualizar Usuários</a> <!-- Esse link está correto -->
         <a href="/alterarusuarios"><i class="fas fa-edit"></i> Alterar Usuários</a>
         <a href="/deletarusuarios"><i class="fas fa-user-minus"></i> Deletar Usuários</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
-    <!-- Main Content -->
+    <!-- Content -->
     <div class="content">
-        <h1 class="text-center">Dashboard</h1>
-        <div class="container mt-4">
-            <h2>Bem-vindo ao Gerenciamento de Usuários</h2>
-            <p>Escolha uma opção no menu à esquerda para começar.</p>
-            <div class="row">
-                <div class="col-md-4">
-                    <a href="/createuser" class="btn btn-primary btn-lg btn-block">Criar Novo Usuário</a>
+        <div class="form-container">
+            <h2 class="text-center mb-4">Criar Novo Usuário</h2>
+            <form method="POST" action="{{ url_for('create_user') }}">
+                {{ form.hidden_tag() }}
+                <div class="form-group">
+                    {{ form.username.label(class="font-weight-bold") }}
+                    {{ form.username(class="form-control", placeholder="Nome de Usuário") }}
                 </div>
-                <div class="col-md-4">
-                    <a href="/visualizarusuarios" class="btn btn-success btn-lg btn-block">Visualizar Usuários</a>
+                <div class="form-group">
+                    {{ form.password.label(class="font-weight-bold") }}
+                    {{ form.password(class="form-control", placeholder="Senha") }}
                 </div>
-                <div class="col-md-4">
-                    <a href="/configuracoes" class="btn btn-warning btn-lg btn-block">Configurações</a>
+                <div class="form-group text-center">
+                    {{ form.submit(class="btn btn-primary btn-block") }}
                 </div>
-            </div>
+            </form>
         </div>
     </div>
 
-    <!-- Link do Bootstrap JS e dependências -->
+    <!-- Bootstrap JS e dependências -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
