@@ -1,19 +1,70 @@
-@app.route('/dashboard')
-def dashboard():
-    return '''
-    <!DOCTYPE html>
-    <html lang="pt-BR">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Dashboard</title>
-        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    </head>
-    <body>
-        <div class="container text-center">
-            <h1>Parabéns, você está logado!</h1>
-            <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Gerenciamento de Usuários</title>
+    <!-- Link do Bootstrap CSS -->
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+        }
+        .sidebar {
+            height: 100vh;
+            background-color: #343a40;
+            padding-top: 20px;
+        }
+        .sidebar a {
+            color: white;
+            margin: 10px 0;
+        }
+        .sidebar a:hover {
+            color: #ffc107;
+        }
+        .main-content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+        .card {
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar col-md-2">
+        <h2 class="text-white text-center">Menu</h2>
+        <a href="/createuser" class="btn btn-dark btn-block">Criar Usuário</a>
+        <a href="/visualizarusuarios" class="btn btn-dark btn-block">Visualizar Usuários</a>
+        <a href="/configuracoes" class="btn btn-dark btn-block">Configurações</a>
+        <a href="/logout" class="btn btn-dark btn-block">Sair</a>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content col-md-10">
+        <h1 class="text-center">Dashboard</h1>
+        <div class="container mt-4">
+            <h2>Bem-vindo ao Gerenciamento de Usuários</h2>
+            <p>Escolha uma opção no menu à esquerda para começar.</p>
+            <div class="row">
+                <div class="col-md-4">
+                    <a href="/createuser" class="btn btn-primary btn-lg btn-block">Criar Novo Usuário</a>
+                </div>
+                <div class="col-md-4">
+                    <a href="/visualizarusuarios" class="btn btn-success btn-lg btn-block">Visualizar Usuários</a>
+                </div>
+                <div class="col-md-4">
+                    <a href="/configuracoes" class="btn btn-warning btn-lg btn-block">Configurações</a>
+                </div>
+            </div>
         </div>
-    </body>
-    </html>
-    '''
+    </div>
+
+    <!-- Link do Bootstrap JS e dependências -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>

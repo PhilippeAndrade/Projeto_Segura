@@ -19,27 +19,31 @@
         }
         .container {
             max-width: 600px;
-            padding: 40px;
+            padding: 20px;
             border-radius: 10px;
             background-color: #ffffff;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             animation: fadeIn 2s ease-in-out;
         }
         h1 {
-            font-size: 4em;
+            font-size: 3em;
             color: #ff6b6b;
             animation: bounce 1.5s infinite;
         }
         p {
-            font-size: 1.5em;
+            font-size: 1.2em;
             color: #555;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
         }
         img {
-            max-width: 100%;
+            max-width: 100%; /* Ajuste para 100% para garantir que a imagem se ajuste ao contêiner */
             height: auto;
-            margin-bottom: 30px;
+            margin-bottom: 20px;
             animation: float 3s ease-in-out infinite;
+        }
+        .btn-back {
+            font-size: 1em;
+            padding: 10px 20px;
         }
         /* Animações */
         @keyframes fadeIn {
@@ -59,10 +63,10 @@
 </head>
 <body>
     <div class="container text-center">
-        <img src="{{ url_for('static', filename='error.png') }}" alt="404 Error">
+        <img src="{{ url_for('static', filename='error.png') }}" alt="404 Error" class="img-fluid">
         <h1>404</h1>
         <p>Oops! A página que você está procurando não foi encontrada.</p>
-        <a href="/login" class="btn btn-primary btn-lg">Voltar para a tela de login</a>
+        <a href="/login" class="btn btn-primary btn-lg btn-back">Voltar para a tela de login</a>
     </div>
 
     <!-- Link do Bootstrap JS e dependências (opcional) -->
