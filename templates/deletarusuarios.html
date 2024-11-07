@@ -59,7 +59,7 @@
             font-size: 0.9rem;
             margin-top: 15px;
             opacity: 1;
-            transition: opacity 2s ease;
+            transition: opacity 0.5s ease;
         }
     </style>
 </head>
@@ -114,7 +114,6 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
-        
         function showResultMessage(message, isSuccess = true) {
             const resultMessage = document.getElementById('resultMessage');
             resultMessage.textContent = message;
@@ -122,28 +121,28 @@
             resultMessage.style.display = 'block';
             resultMessage.style.opacity = 1;
 
-            // Mantém a mensagem visível por 3 segundos, depois começa a desaparecer gradualmente
+            // Exibe a mensagem brevemente
             setTimeout(() => {
-                resultMessage.style.opacity = 0; // Faz o fade-out em 1 segundo
+                resultMessage.style.opacity = 0; // Fade-out rápido
                 setTimeout(() => {
                     resultMessage.style.display = 'none'; // Esconde após o fade-out
-                }, 1000); // Tempo para o fade-out completo
-            }, 3000); // Tempo que a mensagem fica visível antes de iniciar o fade-out
+                }, 500);
+            }, 2000);
         }
-
 
         function confirmDeletion() {
             const confirmDelete = confirm("Tem certeza de que deseja excluir os usuários selecionados?");
             if (confirmDelete) {
-                // Executa o AJAX para envio do formulário sem recarregar a página
                 const formData = $("#deleteUserForm").serialize();
                 
                 $.ajax({
-                    url: "{{ url_for('deletar_usuarios') }}", // Altere para a rota do backend
+                    url: "{{ url_for('deletar_usuarios') }}",
                     type: "POST",
                     data: formData,
                     success: function(response) {
-                        showResultMessage("Usuários excluídos com sucesso!", true);
+                        // Armazena a mensagem no localStorage antes de recarregar a página
+                        localStorage.setItem('deleteSuccessMessage', "Usuários excluídos com sucesso!");
+                        window.location.reload();
                     },
                     error: function() {
                         showResultMessage("Erro ao excluir usuários.", false);
@@ -153,6 +152,15 @@
                 showResultMessage("Operação cancelada.", false);
             }
         }
+
+        // Checa se há uma mensagem no localStorage ao carregar a página e exibe
+        window.addEventListener('load', () => {
+            const message = localStorage.getItem('deleteSuccessMessage');
+            if (message) {
+                showResultMessage(message, true);
+                localStorage.removeItem('deleteSuccessMessage'); // Remove a mensagem após exibi-la
+            }
+        });
     </script>
 
 </body>
