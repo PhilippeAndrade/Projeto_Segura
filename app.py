@@ -81,7 +81,36 @@ def login():
 def dashboard():
     return render_template('dashboard.html')  # Renderiza o dashboard
 
-# Rota para criar novos usuários, acessível apenas para usuários logados
+
+@app.route('/createdevice', methods=['GET', 'POST'])
+@login_required
+def create_device():
+    if request.method == 'POST' and request.is_json:
+        data = request.get_json()
+        nome = data.get('nome')
+        id_modelo = data.get('id_modelo')
+        mac_address = data.get('mac_address')
+        id_grupo = data.get('id_grupo')
+        ip = data.get('ip')
+
+        if nome and mac_address and ip:
+            try:
+                cursor = mysql.connection.cursor()
+                cursor.execute("""
+                    INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip) 
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (nome, id_modelo, mac_address, id_grupo, ip))
+                mysql.connection.commit()
+                cursor.close()
+
+                return jsonify({"success": True, "message": "Dispositivo cadastrado com sucesso!"})
+            except Exception as e:
+                return jsonify({"success": False, "message": f"Erro ao cadastrar dispositivo: {str(e)}"})
+        else:
+            return jsonify({"success": False, "message": "Os campos Nome, MAC Address e IP são obrigatórios."})
+
+    return render_template('createdevice.html')
+
 @app.route('/createuser', methods=['GET', 'POST'])
 @login_required
 def create_user():
@@ -197,19 +226,7 @@ def deletar_usuarios():
 
     return render_template('deletarusuarios.html', usuarios=usuarios)
 
-# Rota para adicionar dispositivos
-@app.route('/add_device', methods=['POST'])
-def add_device():
-    data = request.get_json()
-    device_name = data.get('deviceName')
-    device_ip = data.get('deviceIP')
 
-    # Exemplo de resposta JSON de sucesso
-    response = {
-        "success": True,
-        "message": f"Dispositivo '{device_name}' com IP '{device_ip}' adicionado com sucesso!"
-    }
-    return jsonify(response)
 
 # Rota para fazer upload de um script
 @app.route('/uploadscript', methods=['GET', 'POST'])

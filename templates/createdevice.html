@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Dispositivo</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            transition: all 0.3s ease;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+        }
+        .content h2 {
+            color: #343a40;
+        }
+        .form-container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9rem;
+            display: none;
+        }
+        #resultMessage {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 1;
+            transition: opacity 2s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/createdevice" class="active"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
+        <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
+        <a href="/editdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
+        <a href="/deletedevices"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Cadastrar Novo Dispositivo</h2>
+            <form id="deviceForm">
+                <div class="form-group">
+                    <label for="nome" class="font-weight-bold">Nome do Dispositivo</label>
+                    <input type="text" id="nome" class="form-control" placeholder="Nome do Dispositivo">
+                    <small class="error-message" id="nomeError">O nome do dispositivo é obrigatório.</small>
+                </div>
+                <div class="form-group">
+                    <label for="id_modelo" class="font-weight-bold">ID do Modelo</label>
+                    <input type="number" id="id_modelo" class="form-control" placeholder="ID do Modelo">
+                </div>
+                <div class="form-group">
+                    <label for="mac_address" class="font-weight-bold">MAC Address</label>
+                    <input type="text" id="mac_address" class="form-control" placeholder="MAC Address">
+                    <small class="error-message" id="macAddressError">O MAC Address é obrigatório.</small>
+                </div>
+                <div class="form-group">
+                    <label for="id_grupo" class="font-weight-bold">ID do Grupo</label>
+                    <input type="number" id="id_grupo" class="form-control" placeholder="ID do Grupo">
+                </div>
+                <div class="form-group">
+                    <label for="ip" class="font-weight-bold">Endereço IP</label>
+                    <input type="text" id="ip" class="form-control" placeholder="Endereço IP">
+                    <small class="error-message" id="ipError">O endereço IP é obrigatório.</small>
+                </div>
+                <div class="form-group text-center">
+                    <button type="button" id="submitBtn" class="btn btn-primary btn-block">Cadastrar Dispositivo</button>
+                </div>
+            </form>
+            <div id="resultMessage" class="text-center"></div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            const nomeField = document.getElementById("nome");
+            const idModeloField = document.getElementById("id_modelo");
+            const macAddressField = document.getElementById("mac_address");
+            const idGrupoField = document.getElementById("id_grupo");
+            const ipField = document.getElementById("ip");
+            const resultMessage = document.getElementById("resultMessage");
+            const submitBtn = document.getElementById("submitBtn");
+
+            function validateForm() {
+                let valid = true;
+
+                if (nomeField.value.trim() === "") {
+                    document.getElementById("nomeError").style.display = "block";
+                    valid = false;
+                } else {
+                    document.getElementById("nomeError").style.display = "none";
+                }
+
+                if (macAddressField.value.trim() === "") {
+                    document.getElementById("macAddressError").style.display = "block";
+                    valid = false;
+                } else {
+                    document.getElementById("macAddressError").style.display = "none";
+                }
+
+                if (ipField.value.trim() === "") {
+                    document.getElementById("ipError").style.display = "block";
+                    valid = false;
+                } else {
+                    document.getElementById("ipError").style.display = "none";
+                }
+
+                return valid;
+            }
+
+            submitBtn.addEventListener("click", function() {
+                if (validateForm()) {
+                    $.ajax({
+                        url: "{{ url_for('create_device') }}",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            nome: nomeField.value,
+                            id_modelo: idModeloField.value,
+                            mac_address: macAddressField.value,
+                            id_grupo: idGrupoField.value,
+                            ip: ipField.value
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
+                                resultMessage.style.opacity = 1;
+                                nomeField.value = "";
+                                idModeloField.value = "";
+                                macAddressField.value = "";
+                                idGrupoField.value = "";
+                                ipField.value = "";
+
+                                setTimeout(function() {
+                                    resultMessage.style.opacity = 0;
+                                }, 2000);
+                            } else {
+                                resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`;
+                                resultMessage.style.opacity = 1;
+                            }
+                        },
+                        error: function() {
+                            resultMessage.innerHTML = `<span class="text-danger">Erro ao processar o pedido. Tente novamente.</span>`;
+                            resultMessage.style.opacity = 1;
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>
