@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gerenciar Dispositivos</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            transition: all 0.3s ease;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .form-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: white;
+        }
+        .btn-warning:hover {
+            background-color: #e0a800;
+            border-color: #e0a800;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/managerdevices" class="active"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
+        <a href="/uploadscript"><i class="fas fa-upload"></i> Upload de Scripts</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Lista de Dispositivos</h2>
+
+            <!-- Tabela com dispositivos e botão para gerenciar -->
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome do Dispositivo</th>
+                        <th>Fabricante</th>
+                        <th>Modelo</th>
+                        <th>Versão</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dispositivo in dispositivos %}
+                    <tr>
+                        <td>{{ dispositivo.nome }}</td> <!-- Exibe o nome do dispositivo -->
+                        <td>{{ dispositivo.fabricante }}</td> <!-- Exibe o fabricante -->
+                        <td>{{ dispositivo.modelo }}</td> <!-- Exibe o modelo -->
+                        <td>{{ dispositivo.versao }}</td> <!-- Exibe a versão -->
+                        <td>
+                            <a href="{{ url_for('manage_scripts', dispositivo_id=dispositivo.id) }}" class="btn btn-warning">Gerenciar</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <a href="/dashboard" class="btn btn-primary mt-3">Voltar ao Dashboard</a>
+        </div>
+    </div>
+
+</body>
+</html>

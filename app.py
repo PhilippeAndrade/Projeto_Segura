@@ -186,6 +186,26 @@ def deletar_usuarios():
 
     return render_template('deletarusuarios.html', usuarios=usuarios)
 
+@app.route('/add_device', methods=['POST'])
+def add_device():
+    data = request.get_json()
+    device_name = data.get('deviceName')
+    device_ip = data.get('deviceIP')
+
+    # Aqui você pode adicionar lógica para salvar o dispositivo no banco de dados
+    # Para este exemplo, vamos apenas retornar uma resposta de sucesso
+
+    response = {
+        "success": True,
+        "message": f"Dispositivo '{device_name}' com IP '{device_ip}' adicionado com sucesso!"
+    }
+    return jsonify(response)
+
+@app.route('/managerdevices')
+@login_required
+def manager_devices():
+    return render_template('managerdevices.html')
+
 @app.errorhandler(404)
 def page_not_found(e):
     return render_template('404.html'), 404

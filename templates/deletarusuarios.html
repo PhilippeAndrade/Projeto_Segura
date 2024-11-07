@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deletar Usuários</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
@@ -82,7 +83,7 @@
             <!-- Mensagem de resultado (sucesso ou erro) -->
             <div id="resultMessage" class="message-box" style="display: none;"></div>
 
-            <form action="{{ url_for('deletar_usuarios') }}" method="POST">
+            <form id="deleteUserForm" action="{{ url_for('deletar_usuarios') }}" method="POST">
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -101,7 +102,7 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+                <button type="button" class="btn btn-danger" onclick="confirmDeletion()">Confirmar Exclusão</button>
                 <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>
             </form>
         </div>
@@ -114,6 +115,7 @@
 
     <script>
         // Função para exibir a mensagem de resultado dentro do form-container
+        // Função para exibir a mensagem de resultado dentro do form-container
         function showResultMessage(message, isSuccess = true) {
             const resultMessage = document.getElementById('resultMessage');
             resultMessage.textContent = message;
@@ -121,18 +123,26 @@
             resultMessage.style.display = 'block';
             resultMessage.style.opacity = 1;
 
-            // Gradualmente desaparece após 2 segundos
+            // A mensagem permanece visível por 2 segundos antes de começar a desaparecer
             setTimeout(() => {
-                resultMessage.style.opacity = 0;
+                resultMessage.style.opacity = 0; // Inicia o desaparecimento
                 setTimeout(() => {
-                    resultMessage.style.display = 'none';
-                }, 2000); // 2 segundos para desaparecer
-            }, 2000); // Exibe por 2 segundos antes de começar a desaparecer
+                    resultMessage.style.display = 'none'; // Esconde após o desaparecimento
+                }, 2000); // 2 segundos para desaparecer gradualmente
+            }, 2000); // 2 segundos de exibição antes de começar o desaparecimento
         }
 
-        // Exemplo de teste para visualizar a mensagem (remova ou altere para o servidor chamar essa função quando necessário)
-        // showResultMessage("Usuários excluídos com sucesso!", true); // Para sucesso
-        // showResultMessage("Erro ao excluir usuários.", false); // Para erro
+
+        // Função para confirmar exclusão
+        function confirmDeletion() {
+            const confirmDelete = confirm("Tem certeza de que deseja excluir os usuários selecionados?");
+            if (confirmDelete) {
+                document.getElementById('deleteUserForm').submit(); // Envia o formulário
+                showResultMessage("Usuários excluídos com sucesso!", true); // Exibe mensagem de sucesso
+            } else {
+                showResultMessage("Operação cancelada.", false); // Exibe mensagem de cancelamento
+            }
+        }
     </script>
 
 </body>
