@@ -200,7 +200,21 @@ def add_device():
         "message": f"Dispositivo '{device_name}' com IP '{device_ip}' adicionado com sucesso!"
     }
     return jsonify(response)
+@app.route('/uploadscript', methods=['GET', 'POST'])
+def upload_script():
+    if request.method == 'POST':
+        # Aqui você pode adicionar a lógica para processar o upload do script
+        router_model_id = request.form['router_model_id']
+        script_file = request.files['script_file']
+        
+        # Por exemplo, salvar o arquivo e processá-lo de acordo com o modelo selecionado
+        # script_file.save(f"caminho/para/salvar/{script_file.filename}")
 
+        # Redirecionar ou mostrar uma mensagem de sucesso (opcional)
+        return redirect(url_for('upload_script'))
+
+    # Renderiza o template com a lista de modelos de roteadores
+    return render_template('upload_script.html')
 @app.route('/managerdevices')
 @login_required
 def manager_devices():

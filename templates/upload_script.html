@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gerenciar Dispositivos</title>
+    <title>Upload de Scripts</title>
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -78,41 +78,32 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
-        <a href="/managerdevices" class="active"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
-        <a href="/uploadscript"><i class="fas fa-upload"></i> Upload de Scripts</a>
+        <a href="/managerdevices"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
+        <a href="/uploadscript" class="active"><i class="fas fa-upload"></i> Upload de Scripts</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
     <!-- Content -->
     <div class="content">
         <div class="form-container">
-            <h2 class="text-center mb-4">Lista de Dispositivos</h2>
+            <h3 class="mt-4">Upload de Scripts</h3>
 
-            <!-- Tabela com dispositivos e botão para gerenciar -->
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Nome do Dispositivo</th>
-                        <th>Fabricante</th>
-                        <th>Modelo</th>
-                        <th>Versão</th>
-                        <th>Ação</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for dispositivo in dispositivos %}
-                    <tr>
-                        <td>{{ dispositivo.nome }}</td>
-                        <td>{{ dispositivo.fabricante }}</td>
-                        <td>{{ dispositivo.modelo }}</td>
-                        <td>{{ dispositivo.versao }}</td>
-                        <td>
-                            <a href="{{ url_for('manage_scripts', dispositivo_id=dispositivo.id) }}" class="btn btn-warning">Gerenciar</a>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+            <!-- Formulário de Upload de Scripts -->
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('add_device') }}">
+                <div class="form-group">
+                    <label for="router_model_id">Modelo do Roteador:</label>
+                    <select name="router_model_id" class="form-control" required>
+                        {% for model in router_models %}
+                        <option value="{{ model.id }}">{{ model.model_name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="script_file">Arquivo do Script:</label>
+                    <input type="file" name="script_file" class="form-control" required>
+                </div>
+                <button type="submit" class="btn btn-primary">Carregar Script</button>
+            </form>
 
             <a href="/dashboard" class="btn btn-primary mt-3">Voltar ao Dashboard</a>
         </div>
