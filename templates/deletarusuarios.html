@@ -52,7 +52,7 @@
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            margin-top: 0px; /* Alinhado ao topo */
+            margin-top: 0px;
             text-align: center;
         }
         .message-box {
@@ -94,9 +94,9 @@
                     <tbody>
                         {% for usuario in usuarios %}
                         <tr>
-                            <td>{{ usuario[1] }}</td> <!-- Exibe o nome do usuário -->
+                            <td>{{ usuario[1] }}</td>
                             <td>
-                                <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}"> <!-- Checkbox para selecionar o usuário -->
+                                <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}">
                             </td>
                         </tr>
                         {% endfor %}
@@ -109,13 +109,12 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
-        // Função para exibir a mensagem de resultado dentro do form-container
-        // Função para exibir a mensagem de resultado dentro do form-container
+        
         function showResultMessage(message, isSuccess = true) {
             const resultMessage = document.getElementById('resultMessage');
             resultMessage.textContent = message;
@@ -123,24 +122,35 @@
             resultMessage.style.display = 'block';
             resultMessage.style.opacity = 1;
 
-            // A mensagem permanece visível por 2 segundos antes de começar a desaparecer
+            // Mantém a mensagem visível por 3 segundos, depois começa a desaparecer gradualmente
             setTimeout(() => {
-                resultMessage.style.opacity = 0; // Inicia o desaparecimento
+                resultMessage.style.opacity = 0; // Faz o fade-out em 1 segundo
                 setTimeout(() => {
-                    resultMessage.style.display = 'none'; // Esconde após o desaparecimento
-                }, 2000); // 2 segundos para desaparecer gradualmente
-            }, 2000); // 2 segundos de exibição antes de começar o desaparecimento
+                    resultMessage.style.display = 'none'; // Esconde após o fade-out
+                }, 1000); // Tempo para o fade-out completo
+            }, 3000); // Tempo que a mensagem fica visível antes de iniciar o fade-out
         }
 
 
-        // Função para confirmar exclusão
         function confirmDeletion() {
             const confirmDelete = confirm("Tem certeza de que deseja excluir os usuários selecionados?");
             if (confirmDelete) {
-                document.getElementById('deleteUserForm').submit(); // Envia o formulário
-                showResultMessage("Usuários excluídos com sucesso!", true); // Exibe mensagem de sucesso
+                // Executa o AJAX para envio do formulário sem recarregar a página
+                const formData = $("#deleteUserForm").serialize();
+                
+                $.ajax({
+                    url: "{{ url_for('deletar_usuarios') }}", // Altere para a rota do backend
+                    type: "POST",
+                    data: formData,
+                    success: function(response) {
+                        showResultMessage("Usuários excluídos com sucesso!", true);
+                    },
+                    error: function() {
+                        showResultMessage("Erro ao excluir usuários.", false);
+                    }
+                });
             } else {
-                showResultMessage("Operação cancelada.", false); // Exibe mensagem de cancelamento
+                showResultMessage("Operação cancelada.", false);
             }
         }
     </script>

@@ -172,7 +172,7 @@
             }
         }
 
-        // Função para exibir a mensagem de resultado dentro do form-container
+        // Exibe mensagem de sucesso ao alterar senha
         function showResultMessage(message, isSuccess = true) {
             const resultMessage = document.getElementById('resultMessage');
             resultMessage.textContent = message;
@@ -185,13 +185,25 @@
                 resultMessage.style.opacity = 0;
                 setTimeout(() => {
                     resultMessage.style.display = 'none';
-                }, 2000); // 2 segundos para desaparecer
-            }, 2000); // Exibe por 2 segundos antes de começar a desaparecer
+                }, 2000);
+            }, 2000);
         }
 
-        // Exemplo de teste para visualizar a mensagem (remova ou altere para o servidor chamar essa função quando necessário)
-        // showResultMessage("Senha alterada com sucesso!", true); // Para sucesso
-        // showResultMessage("Erro ao alterar a senha.", false); // Para erro
+        // Lida com o envio do formulário
+        document.getElementById("passwordForm").addEventListener("submit", function(event) {
+            event.preventDefault();  // Remova esta linha após integrar com backend
+
+            // Aqui você chamaria sua lógica de backend para alterar a senha
+            // Simulação do resultado de sucesso
+            showResultMessage("Senha alterada com sucesso!", true);
+
+            // Fechar o modal
+            $('#passwordModal').modal('hide');
+
+            // Limpar os campos de senha
+            document.getElementById('nova_senha').value = '';
+            document.getElementById('confirmar_senha').value = '';
+        });
     </script>
 </body>
 </html>
