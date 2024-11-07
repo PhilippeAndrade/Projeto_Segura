@@ -1,12 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <!-- Metadados básicos do documento HTML -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Deletar Usuários</title>
+    
+    <!-- Link para o ícone da página -->
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    
+    <!-- Link para o CSS do Bootstrap para estilos rápidos -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    
+    <!-- Link para o Font Awesome para ícones -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    
+    <!-- Estilos personalizados para a página -->
     <style>
         body {
             display: flex;
@@ -65,7 +74,7 @@
 </head>
 <body>
 
-    <!-- Sidebar -->
+    <!-- Barra lateral para o menu -->
     <div class="sidebar">
         <h2>Menu</h2>
         <a href="/createuser"><i class="fas fa-user-plus"></i> Cadastrar Usuário</a>
@@ -75,14 +84,15 @@
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
-    <!-- Content -->
+    <!-- Conteúdo principal da página -->
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Deletar Usuários</h2>
 
-            <!-- Mensagem de resultado (sucesso ou erro) -->
+            <!-- Elemento para exibir a mensagem de resultado (sucesso ou erro) -->
             <div id="resultMessage" class="message-box" style="display: none;"></div>
 
+            <!-- Formulário para deletar usuários -->
             <form id="deleteUserForm" action="{{ url_for('deletar_usuarios') }}" method="POST">
                 <table class="table table-bordered">
                     <thead>
@@ -94,9 +104,9 @@
                     <tbody>
                         {% for usuario in usuarios %}
                         <tr>
-                            <td>{{ usuario[1] }}</td>
+                            <td>{{ usuario[1] }}</td> <!-- Exibe o nome do usuário -->
                             <td>
-                                <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}">
+                                <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}"> <!-- Checkbox para selecionar o usuário -->
                             </td>
                         </tr>
                         {% endfor %}
@@ -108,57 +118,61 @@
         </div>
     </div>
 
-    <!-- Scripts -->
+    <!-- Scripts de bibliotecas JavaScript -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
+        // Função para exibir a mensagem de resultado
         function showResultMessage(message, isSuccess = true) {
+            // Pega o elemento de mensagem pelo ID
             const resultMessage = document.getElementById('resultMessage');
-            resultMessage.textContent = message;
+            resultMessage.textContent = message; // Define o texto da mensagem
+            // Define a classe de acordo com o tipo de mensagem (sucesso ou erro)
             resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
-            resultMessage.style.display = 'block';
-            resultMessage.style.opacity = 1;
+            resultMessage.style.display = 'block'; // Exibe o elemento de mensagem
+            resultMessage.style.opacity = 1; // Define a opacidade para 1 para torná-lo visível
 
-            // Exibe a mensagem brevemente
+            // Configura um timer para esconder a mensagem após 2 segundos
             setTimeout(() => {
-                resultMessage.style.opacity = 0; // Fade-out rápido
+                resultMessage.style.opacity = 0; // Reduz a opacidade para 0 para o fade-out
                 setTimeout(() => {
-                    resultMessage.style.display = 'none'; // Esconde após o fade-out
-                }, 500);
-            }, 2000);
+                    resultMessage.style.display = 'none'; // Esconde o elemento completamente após o fade-out
+                }, 500); // Tempo de fade-out de 0.5 segundo
+            }, 2000); // Mantém a mensagem visível por 2 segundos
         }
 
+        // Função para confirmar a exclusão dos usuários
         function confirmDeletion() {
-            const confirmDelete = confirm("Tem certeza de que deseja excluir os usuários selecionados?");
+            const confirmDelete = confirm("Tem certeza de que deseja excluir os usuários selecionados?"); // Abre uma caixa de diálogo de confirmação
             if (confirmDelete) {
-                const formData = $("#deleteUserForm").serialize();
+                const formData = $("#deleteUserForm").serialize(); // Serializa o formulário para enviar por AJAX
                 
                 $.ajax({
-                    url: "{{ url_for('deletar_usuarios') }}",
-                    type: "POST",
-                    data: formData,
-                    success: function(response) {
+                    url: "{{ url_for('deletar_usuarios') }}", // URL do backend
+                    type: "POST", // Método de requisição POST
+                    data: formData, // Dados do formulário
+                    success: function(response) { // Se a requisição for bem-sucedida
                         // Armazena a mensagem no localStorage antes de recarregar a página
                         localStorage.setItem('deleteSuccessMessage', "Usuários excluídos com sucesso!");
-                        window.location.reload();
+                        window.location.reload(); // Recarrega a página
                     },
-                    error: function() {
-                        showResultMessage("Erro ao excluir usuários.", false);
+                    error: function() { // Se houver erro na requisição
+                        showResultMessage("Erro ao excluir usuários.", false); // Exibe uma mensagem de erro
                     }
                 });
             } else {
-                showResultMessage("Operação cancelada.", false);
+                showResultMessage("Operação cancelada.", false); // Exibe uma mensagem caso a exclusão seja cancelada
             }
         }
 
-        // Checa se há uma mensagem no localStorage ao carregar a página e exibe
+        // Exibe a mensagem armazenada no localStorage ao carregar a página
         window.addEventListener('load', () => {
-            const message = localStorage.getItem('deleteSuccessMessage');
-            if (message) {
-                showResultMessage(message, true);
-                localStorage.removeItem('deleteSuccessMessage'); // Remove a mensagem após exibi-la
+            const message = localStorage.getItem('deleteSuccessMessage'); // Obtém a mensagem do localStorage
+            if (message) { // Se a mensagem existir
+                showResultMessage(message, true); // Exibe a mensagem de sucesso
+                localStorage.removeItem('deleteSuccessMessage'); // Remove a mensagem do localStorage após exibir
             }
         });
     </script>

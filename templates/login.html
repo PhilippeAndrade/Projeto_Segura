@@ -1,13 +1,21 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
+    <!-- Define a codificação de caracteres e a escala para dispositivos móveis -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Controladora de APs Segura</title>
+
+    <!-- Favicon do site -->
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+
+    <!-- Importa o CSS do Bootstrap para estilos rápidos -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    
+    <!-- Importa o arquivo de estilos personalizado -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <style>
+        /* Estilo de fundo da página com imagem de fundo */
         body {
             background-color: #C0C8CE;
             background-image: url('{{ url_for("static", filename="background-image.jpg") }}');
@@ -15,16 +23,19 @@
             background-position: center;
             background-repeat: no-repeat;
         }
+        /* Centraliza o logo */
         .logo-container {
             text-align: center;
             margin-bottom: 30px;
         }
+        /* Estilos do formulário de login */
         .form-container {
             background-color: white;
             padding: 20px;
             border-radius: 5px;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
         }
+        /* Estilos para a seção de senha com o ícone de alternar visibilidade */
         .password-container {
             position: relative;
         }
@@ -37,6 +48,7 @@
             font-size: 1.5rem;
             line-height: 1;
         }
+        /* Estilo da mensagem de erro em vermelho */
         .alert-danger {
             background-color: #f8d7da;
             color: #721c24;
@@ -46,10 +58,12 @@
     </style>
 </head>
 <body>
+    <!-- Estrutura principal da página com o formulário de login -->
     <div class="container-fluid">
         <div class="row justify-content-center align-items-center min-vh-100">
             <div class="col-md-4 col-sm-6 col-10">
                 <div class="logo-container">
+                    <!-- Logo da empresa ou do site -->
                     <img src="{{ url_for('static', filename='LOGO_SEGURA.png') }}" alt="Logo Segura" class="logo mb-4 img-fluid">
                 </div>
                 <div class="form-container text-center">
@@ -59,7 +73,7 @@
                     <!-- Exibe apenas a mensagem de logout -->
                     {% with messages = get_flashed_messages(with_categories=true) %}
                         {% if messages %}
-                            <ul class="list-unstyled" id="flashes">
+                            <ul class="list-unstyled" id="logout-flashes">
                                 {% for category, message in messages %}
                                     {% if 'deslogado' in message.lower() %}
                                         <li class="alert alert-{{ category }}">{{ message }}</li>
@@ -68,7 +82,21 @@
                             </ul>
                         {% endif %}
                     {% endwith %}
+
+                    <!-- Exibe todas as outras mensagens flash, exceto "deslogado" -->
+                    {% with messages = get_flashed_messages(with_categories=true) %}
+                        {% if messages %}
+                            <ul class="list-unstyled" id="flashes">
+                                {% for category, message in messages %}
+                                    {% if 'deslogado' not in message.lower() %}
+                                        <li class="alert alert-{{ category }}">{{ message }}</li>
+                                    {% endif %}
+                                {% endfor %}
+                            </ul>
+                        {% endif %}
+                    {% endwith %}
                     
+                    <!-- Formulário de login -->
                     <form method="POST" action="{{ url_for('login') }}">
                         {{ form.hidden_tag() }}
                         
@@ -94,29 +122,40 @@
         </div>
     </div>
 
+    <!-- Scripts de dependência -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.0.7/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
     <script>
+        // Função para alternar a visibilidade da senha
         function togglePassword() {
-            const passwordField = document.getElementById('password');
-            const toggleIcon = document.querySelector('.toggle-password');
-            if (passwordField.type === 'password') {
-                passwordField.type = 'text';
-                toggleIcon.innerHTML = '🙈';
-            } else {
-                passwordField.type = 'password';
-                toggleIcon.innerHTML = '🙉';
+            const passwordField = document.getElementById('password'); // Campo de senha
+            const toggleIcon = document.querySelector('.toggle-password'); // Ícone de alternância
+            if (passwordField.type === 'password') { // Se o tipo do campo é "password"
+                passwordField.type = 'text'; // Altera para "text" para mostrar a senha
+                toggleIcon.innerHTML = '🙈'; // Altera o ícone para um ícone aberto
+            } else { // Caso contrário
+                passwordField.type = 'password'; // Altera para "password" para ocultar a senha
+                toggleIcon.innerHTML = '🙉'; // Altera o ícone para um ícone fechado
             }
         }
 
-        // Remove os flashes após 2 segundos
+        // Remove as mensagens flash de logout após 2 segundos
         setTimeout(() => {
-            const flashes = document.getElementById('flashes');
-            if (flashes) {
-                flashes.style.display = 'none';
+            const logoutFlashes = document.getElementById('logout-flashes'); // Seleciona o elemento de logout
+            if (logoutFlashes) {
+                logoutFlashes.style.display = 'none'; // Oculta o elemento de mensagens de logout
             }
-        }, 2000);
+        }, 2000); // Define o tempo de 2 segundos
+
+        // Remove outras mensagens flash após 2 segundos
+        setTimeout(() => {
+            const flashes = document.getElementById('flashes'); // Seleciona o elemento das outras mensagens
+            if (flashes) {
+                flashes.style.display = 'none'; // Oculta o elemento das mensagens gerais
+            }
+        }, 2000); // Define o tempo de 2 segundos
     </script>
 </body>
 </html>
