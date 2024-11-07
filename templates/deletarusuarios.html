@@ -37,15 +37,28 @@
             background-color: #495057;
             color: #ffc107;
         }
-        .container {
+        .content {
             flex-grow: 1;
             padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
-        .success-message {
-            color: green;
-            font-size: 1rem;
-            display: none;
-            margin-bottom: 10px;
+        .form-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 0px; /* Alinhado ao topo */
+            text-align: center;
+        }
+        .message-box {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            opacity: 1;
+            transition: opacity 2s ease;
         }
     </style>
 </head>
@@ -62,40 +75,36 @@
     </div>
 
     <!-- Content -->
-    <div class="container">
-        <h2 class="text-center mb-4">Deletar Usuários</h2>
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Deletar Usuários</h2>
 
-        <!-- Mensagem de sucesso -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-success success-message">
-                    {{ messages[0] }}
-                </div>
-            {% endif %}
-        {% endwith %}
+            <!-- Mensagem de resultado (sucesso ou erro) -->
+            <div id="resultMessage" class="message-box" style="display: none;"></div>
 
-        <form action="{{ url_for('deletar_usuarios') }}" method="POST">
-            <table class="table table-bordered">
-                <thead>
-                    <tr>
-                        <th>Nome de Usuário</th>
-                        <th>Selecionar para Excluir</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for usuario in usuarios %}
-                    <tr>
-                        <td>{{ usuario[1] }}</td>  <!-- Exibe o nome do usuário -->
-                        <td>
-                            <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}">  <!-- Checkbox para selecionar o usuário -->
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
-            <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
-            <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>  <!-- Voltar para a criação de usuário -->
-        </form>
+            <form action="{{ url_for('deletar_usuarios') }}" method="POST">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Nome de Usuário</th>
+                            <th>Selecionar para Excluir</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        <tr>
+                            <td>{{ usuario[1] }}</td> <!-- Exibe o nome do usuário -->
+                            <td>
+                                <input type="checkbox" name="usuarios_para_deletar" value="{{ usuario[0] }}"> <!-- Checkbox para selecionar o usuário -->
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+                <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
+                <a href="/createuser" class="btn btn-primary">Voltar para Criar Usuário</a>
+            </form>
+        </div>
     </div>
 
     <!-- Scripts -->
@@ -104,13 +113,26 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
-        // Sidebar Active Link Highlight
-        document.querySelectorAll('.sidebar a').forEach(link => {
-            link.addEventListener('click', () => {
-                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-            });
-        });
+        // Função para exibir a mensagem de resultado dentro do form-container
+        function showResultMessage(message, isSuccess = true) {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.textContent = message;
+            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
+            resultMessage.style.display = 'block';
+            resultMessage.style.opacity = 1;
+
+            // Gradualmente desaparece após 2 segundos
+            setTimeout(() => {
+                resultMessage.style.opacity = 0;
+                setTimeout(() => {
+                    resultMessage.style.display = 'none';
+                }, 2000); // 2 segundos para desaparecer
+            }, 2000); // Exibe por 2 segundos antes de começar a desaparecer
+        }
+
+        // Exemplo de teste para visualizar a mensagem (remova ou altere para o servidor chamar essa função quando necessário)
+        // showResultMessage("Usuários excluídos com sucesso!", true); // Para sucesso
+        // showResultMessage("Erro ao excluir usuários.", false); // Para erro
     </script>
 
 </body>

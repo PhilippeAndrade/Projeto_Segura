@@ -37,28 +37,22 @@
             background-color: #495057;
             color: #ffc107;
         }
-        .container {
+        .content {
             flex-grow: 1;
             padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
         }
-        .error-message {
-            color: red;
-            font-size: 0.9rem;
-            display: none;
-        }
-        .success-message {
-            color: green;
-            font-size: 1rem;
-            display: none;
-            margin-bottom: 10px;
-        }
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
+        .form-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 0px;
+            text-align: center;
         }
         .btn-warning {
             background-color: #ffc107;
@@ -68,6 +62,12 @@
         .btn-warning:hover {
             background-color: #e0a800;
             border-color: #e0a800;
+        }
+        .message-box {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            opacity: 1;
+            transition: opacity 2s ease; /* Transição suave para desaparecer */
         }
     </style>
 </head>
@@ -84,62 +84,84 @@
     </div>
 
     <!-- Content -->
-    <div class="container">
-        <h2 class="text-center mb-4">Alterar Senha dos Usuários</h2>
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Alterar Senha dos Usuários</h2>
 
-        <!-- Mensagem de sucesso -->
-        {% with messages = get_flashed_messages() %}
-            {% if messages %}
-                <div class="alert alert-success success-message">
-                    {{ messages[0] }}
+            <!-- Tabela com usuários e botão para alterar senha -->
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome de Usuário</th>
+                        <th>Ação</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario[1] }}</td> <!-- Exibe o nome do usuário -->
+                        <td>
+                            <button class="btn btn-warning" onclick="openModal('{{ usuario[0] }}')">Alterar</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            
+            <!-- Mensagem de resultado (sucesso ou erro) -->
+            <div id="resultMessage" class="message-box" style="display: none;"></div>
+
+            <a href="/createuser" class="btn btn-primary mt-3">Voltar para Criar Usuário</a>
+        </div>
+    </div>
+
+    <!-- Modal de Alteração de Senha -->
+    <div class="modal fade" id="passwordModal" tabindex="-1" aria-labelledby="passwordModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="passwordModalLabel">Alterar Senha</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-            {% endif %}
-        {% endwith %}
-
-        <table class="table table-bordered">
-            <thead>
-                <tr>
-                    <th>Nome de Usuário</th>
-                    <th>Ação</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for usuario in usuarios %}
-                <tr>
-                    <td>{{ usuario[1] }}</td> <!-- Exibe o nome do usuário -->
-                    <td>
-                        <form action="{{ url_for('alterar_usuarios') }}" method="POST" onsubmit="return validatePassword(this)">
-                            <input type="hidden" name="user_id" value="{{ usuario[0] }}">
-                            <div class="input-group mb-2">
-                                <input type="password" class="form-control" name="nova_senha" placeholder="Nova Senha" required>
-                            </div>
-                            <div class="input-group mb-2">
-                                <input type="password" class="form-control" name="confirmar_senha" placeholder="Confirmar Nova Senha" required>
-                            </div>
-                            <div class="input-group-append mb-2">
-                                <button type="submit" class="btn btn-warning">Alterar</button>
-                            </div>
-                            <small class="error-message">As senhas devem ter pelo menos 6 caracteres e serem iguais.</small>
-                        </form>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-        <a href="/createuser" class="btn btn-primary mt-3">Voltar para Criar Usuário</a>
+                <form id="passwordForm" action="{{ url_for('alterar_usuarios') }}" method="POST" onsubmit="return validatePassword()">
+                    <div class="modal-body">
+                        <input type="hidden" name="user_id" id="user_id">
+                        <div class="form-group">
+                            <label for="nova_senha">Nova Senha</label>
+                            <input type="password" class="form-control" name="nova_senha" id="nova_senha" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="confirmar_senha">Confirmar Nova Senha</label>
+                            <input type="password" class="form-control" name="confirmar_senha" id="confirmar_senha" required>
+                            <small class="error-message text-danger" style="display: none;">As senhas devem ter pelo menos 6 caracteres e serem iguais.</small>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-warning">Confirmar Alteração</button>
+                    </div>
+                </form>
+            </div>
+        </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
     <script>
-        function validatePassword(form) {
-            const passwordField = form.querySelector('input[name="nova_senha"]');
-            const confirmPasswordField = form.querySelector('input[name="confirmar_senha"]');
-            const errorMessage = form.querySelector('.error-message');
-            
+        function openModal(userId) {
+            document.getElementById('user_id').value = userId;
+            $('#passwordModal').modal('show');
+        }
+
+        function validatePassword() {
+            const passwordField = document.getElementById('nova_senha');
+            const confirmPasswordField = document.getElementById('confirmar_senha');
+            const errorMessage = document.querySelector('.error-message');
+
             if (passwordField.value.length < 6 || passwordField.value !== confirmPasswordField.value) {
                 errorMessage.style.display = 'block';
                 return false;
@@ -149,14 +171,26 @@
             }
         }
 
-        // Sidebar Active Link Highlight
-        document.querySelectorAll('.sidebar a').forEach(link => {
-            link.addEventListener('click', () => {
-                document.querySelectorAll('.sidebar a').forEach(l => l.classList.remove('active'));
-                link.classList.add('active');
-            });
-        });
-    </script>
+        // Função para exibir a mensagem de resultado dentro do form-container
+        function showResultMessage(message, isSuccess = true) {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.textContent = message;
+            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
+            resultMessage.style.display = 'block';
+            resultMessage.style.opacity = 1;
 
+            // Gradualmente desaparece após 2 segundos
+            setTimeout(() => {
+                resultMessage.style.opacity = 0;
+                setTimeout(() => {
+                    resultMessage.style.display = 'none';
+                }, 2000); // 2 segundos para desaparecer
+            }, 2000); // Exibe por 2 segundos antes de começar a desaparecer
+        }
+
+        // Exemplo de teste para visualizar a mensagem (remova ou altere para o servidor chamar essa função quando necessário)
+        // showResultMessage("Senha alterada com sucesso!", true); // Para sucesso
+        // showResultMessage("Erro ao alterar a senha.", false); // Para erro
+    </script>
 </body>
 </html>

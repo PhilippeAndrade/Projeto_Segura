@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, flash, session, request
+from flask import Flask, render_template, redirect, url_for, flash, session, request,jsonify
 from flask_mysqldb import MySQL
 from flask_wtf import FlaskForm
 from wtforms import StringField, PasswordField, SubmitField
@@ -76,13 +76,13 @@ def dashboard():
 @app.route('/createuser', methods=['GET', 'POST'])
 @login_required
 def create_user():
-    form = UserForm()  # Instancia o formulário
-    if request.method == 'POST' and form.validate_on_submit():
-        username = form.username.data
-        password = form.password.data
+    form = UserForm()
+    if request.method == 'POST' and request.is_json:
+        data = request.get_json()
+        username = data.get('username')
+        password = data.get('password')
 
         if username and password:
-            # Encrypta a senha
             password_hashed = hash_senha(password)
             
             try:
@@ -91,12 +91,12 @@ def create_user():
                 mysql.connection.commit()
                 cursor.close()
                 
-                flash('Usuário criado com sucesso!', 'success')
-                return redirect(url_for('dashboard'))
+                # Retorna JSON em vez de redirecionar
+                return jsonify({"success": True, "message": "Usuário criado com sucesso!"})
             except Exception as e:
-                flash(f'Erro ao criar usuário: {str(e)}', 'danger')
+                return jsonify({"success": False, "message": f"Erro ao criar usuário: {str(e)}"})
         else:
-            flash('Todos os campos são obrigatórios.', 'danger')
+            return jsonify({"success": False, "message": "Todos os campos são obrigatórios."})
 
     return render_template('createuser.html', form=form)
 
@@ -128,22 +128,25 @@ def alterar_usuarios():
     if request.method == 'POST':
         user_id = request.form.get('user_id')
         nova_senha = request.form.get('nova_senha')
+        confirmar_senha = request.form.get('confirmar_senha')
 
-        if user_id and nova_senha:
-            # Gera o hash da nova senha
-            nova_senha_hashed = hash_senha(nova_senha)
-
+        # Verificação de senha
+        if nova_senha != confirmar_senha:
+            flash("As senhas não coincidem. Por favor, tente novamente.", "danger")
+        elif len(nova_senha) < 6:
+            flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+        else:
             try:
+                # Gera o hash da nova senha
+                nova_senha_hashed = hash_senha(nova_senha)
                 cursor = mysql.connection.cursor()
-                # Atualiza o campo de senha com o hash gerado
                 cursor.execute("UPDATE usuarios SET password = %s WHERE id = %s", (nova_senha_hashed, user_id))
                 mysql.connection.commit()
                 cursor.close()
-
-                flash('Senha do usuário alterada com sucesso!', 'success')
-                return redirect(url_for('alterar_usuarios'))
+                
+                flash("Senha do usuário alterada com sucesso!", "success")
             except Exception as e:
-                flash(f'Erro ao alterar senha: {str(e)}', 'danger')
+                flash(f"Erro ao alterar senha: {str(e)}", "danger")
 
     return render_template('alterarusuarios.html', usuarios=usuarios)
 

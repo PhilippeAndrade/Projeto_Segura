@@ -65,6 +65,12 @@
             font-size: 0.9rem;
             display: none;
         }
+        #resultMessage {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 1; /* Começa visível */
+            transition: opacity 2s ease; /* Transição suave de 2 segundos */
+        }
     </style>
 </head>
 <body>
@@ -72,8 +78,8 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
-        <a href="#" data-toggle="modal" data-target="#createUserModal" class="active"><i class="fas fa-user-plus" ></i> Cadastrar Usuário</a>
-        <a href="/visualizarusuarios" ><i class="fas fa-eye"></i> Visualizar Usuários</a>
+        <a href="#" data-toggle="modal" data-target="#createUserModal" class="active"><i class="fas fa-user-plus"></i> Cadastrar Usuário</a>
+        <a href="/visualizarusuarios"><i class="fas fa-eye"></i> Visualizar Usuários</a>
         <a href="/alterarusuarios"><i class="fas fa-edit"></i> Alterar Usuários</a>
         <a href="/deletarusuarios"><i class="fas fa-user-minus"></i> Deletar Usuários</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
@@ -83,41 +89,37 @@
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Criar Novo Usuário</h2>
-            <form id="userForm" method="POST" action="{{ url_for('create_user') }}">
-                {{ form.hidden_tag() }}
+            <form id="userForm">
                 <div class="form-group">
-                    {{ form.username.label(class="font-weight-bold") }}
-                    {{ form.username(class="form-control", placeholder="Nome de Usuário", id="username") }}
+                    <label for="username" class="font-weight-bold">Nome de Usuário</label>
+                    <input type="text" id="username" class="form-control" placeholder="Nome de Usuário">
                     <small class="error-message" id="usernameError">O nome de usuário é obrigatório.</small>
                 </div>
                 <div class="form-group">
-                    {{ form.password.label(class="font-weight-bold") }}
-                    {{ form.password(class="form-control", placeholder="Senha", id="password") }}
+                    <label for="password" class="font-weight-bold">Senha</label>
+                    <input type="password" id="password" class="form-control" placeholder="Senha">
                     <small class="error-message" id="passwordError">A senha é obrigatória e deve ter pelo menos 6 caracteres.</small>
                 </div>
                 <div class="form-group text-center">
-                    {{ form.submit(class="btn btn-primary btn-block") }}
+                    <button type="button" id="submitBtn" class="btn btn-primary btn-block">Criar Usuário</button>
                 </div>
             </form>
+            <div id="resultMessage" class="text-center"></div> <!-- Mensagem de resultado -->
         </div>
     </div>
 
-    <!-- Bootstrap JS e dependências -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-    
-    <!-- Validação e Animações -->
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
             const usernameField = document.getElementById("username");
             const passwordField = document.getElementById("password");
             const usernameError = document.getElementById("usernameError");
             const passwordError = document.getElementById("passwordError");
-            const userForm = document.getElementById("userForm");
+            const resultMessage = document.getElementById("resultMessage");
+            const submitBtn = document.getElementById("submitBtn");
 
-            // Validação dinâmica do formulário
-            userForm.addEventListener("submit", function(event) {
+            function validateForm() {
                 let valid = true;
 
                 if (usernameField.value.trim() === "") {
@@ -134,18 +136,41 @@
                     passwordError.style.display = "none";
                 }
 
-                if (!valid) {
-                    event.preventDefault();
-                }
-            });
+                return valid;
+            }
 
-            // Animação de expansão da sidebar
-            const sidebarLinks = document.querySelectorAll(".sidebar a");
-            sidebarLinks.forEach(link => {
-                link.addEventListener("click", () => {
-                    sidebarLinks.forEach(l => l.classList.remove("active"));
-                    link.classList.add("active");
-                });
+            submitBtn.addEventListener("click", function() {
+                if (validateForm()) {
+                    $.ajax({
+                        url: "{{ url_for('create_user') }}",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            username: usernameField.value,
+                            password: passwordField.value
+                        }),
+                        success: function(response) {
+                            if (response.success) {
+                                resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
+                                resultMessage.style.opacity = 1; // Mostra a mensagem
+                                usernameField.value = "";
+                                passwordField.value = "";
+
+                                // Faz a mensagem desaparecer gradualmente
+                                setTimeout(function() {
+                                    resultMessage.style.opacity = 0;
+                                }, 2000);
+                            } else {
+                                resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`;
+                                resultMessage.style.opacity = 1;
+                            }
+                        },
+                        error: function() {
+                            resultMessage.innerHTML = `<span class="text-danger">Erro ao processar o pedido. Tente novamente.</span>`;
+                            resultMessage.style.opacity = 1;
+                        }
+                    });
+                }
             });
         });
     </script>
