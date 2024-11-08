@@ -145,6 +145,12 @@
 
         // Função para confirmar a exclusão dos usuários
         function confirmDeletion() {
+            const selected = document.querySelectorAll('input[name="usuarios_para_deletar"]:checked'); // Verifica checkboxes selecionados
+            if (selected.length === 0) { // Nenhum usuário selecionado
+                showResultMessage("Por favor, selecione pelo menos um usuário para excluir.", false);
+                return;
+            }
+
             const confirmDelete = confirm("Tem certeza de que deseja excluir os usuários selecionados?"); // Abre uma caixa de diálogo de confirmação
             if (confirmDelete) {
                 const formData = $("#deleteUserForm").serialize(); // Serializa o formulário para enviar por AJAX

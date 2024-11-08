@@ -30,6 +30,13 @@
         }
         .content { flex-grow: 1; padding: 30px; display: flex; justify-content: center; align-items: flex-start; }
         .form-container { max-width: 600px; width: 100%; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .message-box {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            opacity: 1;
+            transition: opacity 0.5s ease;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -49,8 +56,11 @@
         <div class="form-container">
             <h2 class="text-center mb-4">Deletar Modelos</h2>
             
+            <!-- Elemento para exibir a mensagem de resultado (sucesso ou erro) -->
+            <div id="resultMessage" class="message-box" style="display: none;"></div>
+
             <!-- Formulário para deletar modelos -->
-            <form action="{{ url_for('deletemodel') }}" method="POST">
+            <form id="deleteModelForm" action="{{ url_for('deletemodel') }}" method="POST">
                 <table class="table table-bordered">
                     <thead>
                         <tr>
@@ -69,16 +79,67 @@
                         {% endfor %}
                     </tbody>
                 </table>
-                <button type="submit" class="btn btn-danger">Confirmar Exclusão</button>
-                <a href="/dashboard" class="btn btn-primary">Cancelar</a>
+                <button type="button" class="btn btn-danger" onclick="confirmModelDeletion()">Confirmar Exclusão</button>
+                <a href="/deletemodel" class="btn btn-primary">Cancelar</a>
             </form>
         </div>
     </div>
 
     <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Função para exibir a mensagem de resultado
+        function showResultMessage(message, isSuccess = true) {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.textContent = message;
+            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
+            resultMessage.style.display = 'block';
+            resultMessage.style.opacity = 1;
+
+            // Configura um timer para esconder a mensagem após 2 segundos
+            setTimeout(() => {
+                resultMessage.style.opacity = 0;
+                setTimeout(() => {
+                    resultMessage.style.display = 'none';
+                }, 500);
+            }, 2000);
+        }
+
+        // Função para confirmar a exclusão dos modelos
+        function confirmModelDeletion() {
+            const confirmDelete = confirm("Tem certeza de que deseja excluir os modelos selecionados?");
+            if (confirmDelete) {
+                const formData = $("#deleteModelForm").serialize();
+                
+                $.ajax({
+                    url: "{{ url_for('deletemodel') }}",
+                    type: "POST",
+                    data: formData,
+                    success: function(response) {
+                        localStorage.setItem('deleteSuccessMessage', "Modelos excluídos com sucesso!");
+                        window.location.reload();
+                    },
+                    error: function() {
+                        showResultMessage("Erro ao excluir modelos.", false);
+                    }
+                });
+            } else {
+                showResultMessage("Operação cancelada.", false);
+            }
+        }
+
+        // Exibe a mensagem armazenada no localStorage ao carregar a página
+        window.addEventListener('load', () => {
+            const message = localStorage.getItem('deleteSuccessMessage');
+            if (message) {
+                showResultMessage(message, true);
+                localStorage.removeItem('deleteSuccessMessage');
+            }
+        });
+    </script>
 
 </body>
 </html>
