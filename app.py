@@ -1,5 +1,5 @@
 # Importa as bibliotecas necessárias para o aplicativo Flask
-from flask import Flask, render_template, redirect, url_for, flash, session, request, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, session, request, jsonify, current_app
 from flask_mysqldb import MySQL  # Para conectar com o MySQL
 from flask_wtf import FlaskForm  # Para formulários seguros com Flask-WTF
 from wtforms import StringField, PasswordField, SubmitField  # Campos para o formulário
@@ -81,36 +81,122 @@ def login():
 def dashboard():
     return render_template('dashboard.html')  # Renderiza o dashboard
 
-@app.route('/createmodel', methods=['GET', 'POST'])
+import os  # Já incluído para operações com o sistema de arquivos
+
+import os  # Para operações com o sistema de arquivos
+
+@app.route('/addmodel', methods=['GET', 'POST'])
 @login_required
-def create_model():
+def add_model():
     if request.method == 'POST' and request.is_json:
         data = request.get_json()
         nome = data.get('nome')
         fabricante = data.get('fabricante')
 
-        if nome and fabricante:  # Verifica se ambos os campos foram preenchidos
-            try:
-                # Insere o novo modelo no banco de dados
-                cursor = mysql.connection.cursor()
-                cursor.execute("INSERT INTO modelo (nome, fabricante) VALUES (%s, %s)", (nome, fabricante))
-                mysql.connection.commit()
-                cursor.close()
-                
-                # Retorna um JSON com sucesso
-                return jsonify({"success": True, "message": "Modelo criado com sucesso!"})
-            except Exception as e:
-                return jsonify({"success": False, "message": f"Erro ao criar modelo: {str(e)}"})
-        else:
+        if not nome or not fabricante:
             return jsonify({"success": False, "message": "Todos os campos são obrigatórios."})
 
-    return render_template('createmodel.html')  # Renderiza a página para criar modelos
+        try:
+            # Verificação se o modelo já existe no banco de dados
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT * FROM modelo WHERE nome = %s", (nome,))
+            existing_model = cursor.fetchone()
+            
+            if existing_model:
+                cursor.close()
+                return jsonify({"success": False, "message": "Esse modelo já existe."})
+
+            # Inserção no banco de dados caso não exista
+            cursor.execute("INSERT INTO modelo (nome, fabricante) VALUES (%s, %s)", (nome, fabricante))
+            mysql.connection.commit()
+            cursor.close()
+
+            # Criar pasta com o nome do modelo
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            scripts_path = os.path.join(base_dir, 'scripts')
+            modelo_path = os.path.join(scripts_path, nome)
+
+            os.makedirs(modelo_path, exist_ok=True)
+
+            return jsonify({"success": True, "message": "Modelo adicionado e pasta criada com sucesso!"})
+
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Erro ao adicionar o modelo: {str(e)}"})
+
+    # Renderiza o formulário HTML se o método for GET
+    return render_template('addmodel.html')
 
 
+# Rota para alterar modelos, acessível apenas para usuários logados
 
-@app.route('/createdevice', methods=['GET', 'POST'])
+
+@app.route('/altermodel', methods=['GET', 'POST'])
 @login_required
-def create_device():
+def alter_model():
+    # Exibe a página de alteração de modelos
+    if request.method == 'GET':
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT id_modelo, nome, fabricante FROM modelo")
+        modelos = cursor.fetchall()
+        cursor.close()
+        return render_template('altermodel.html', modelos=modelos)
+
+    # Lida com a atualização do modelo via JSON
+    if request.method == 'POST' and request.is_json:
+        data = request.get_json()
+        model_id = data.get('model_id')
+        nome_modelo_novo = data.get('nome_modelo', '').strip()
+        fabricante_modelo = data.get('fabricante_modelo', '').strip()
+
+        # Verifica se os campos estão preenchidos
+        if not nome_modelo_novo or not fabricante_modelo:
+            return jsonify({"success": False, "message": "Todos os campos são obrigatórios."}), 400
+
+        try:
+            # Busca o nome antigo do modelo
+            cursor = mysql.connection.cursor()
+            cursor.execute("SELECT nome FROM modelo WHERE id_modelo = %s", (model_id,))
+            nome_modelo_antigo = cursor.fetchone()[0]
+            cursor.close()
+
+            # Atualiza o nome e o fabricante no banco de dados
+            cursor = mysql.connection.cursor()
+            cursor.execute("""
+                UPDATE modelo 
+                SET nome = %s, fabricante = %s 
+                WHERE id_modelo = %s
+            """, (nome_modelo_novo, fabricante_modelo, model_id))
+            mysql.connection.commit()
+            cursor.close()
+
+            # Renomeia a pasta se o nome do modelo foi alterado
+            base_dir = os.path.dirname(os.path.abspath(__file__))
+            scripts_path = os.path.join(base_dir, 'scripts')
+            pasta_antiga = os.path.join(scripts_path, nome_modelo_antigo)
+            pasta_nova = os.path.join(scripts_path, nome_modelo_novo)
+
+            # Verifica a existência da pasta e renomeia
+            if nome_modelo_antigo != nome_modelo_novo and os.path.exists(pasta_antiga):
+                os.rename(pasta_antiga, pasta_nova)
+
+            return jsonify({"success": True, "message": "Modelo atualizado com sucesso!"})
+
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Erro ao atualizar modelo: {str(e)}"}), 500
+
+@app.route('/viewmodel')
+@login_required
+def view_model():
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id_modelo, nome, fabricante FROM modelo")  # Seleciona todos os modelos
+    modelos = cursor.fetchall()
+    cursor.close()
+    return render_template('viewmodel.html', modelos=modelos)
+
+
+@app.route('/adddevice', methods=['GET', 'POST'])
+@login_required
+def add_device():
     if request.method == 'POST' and request.is_json:
         data = request.get_json()
         nome = data.get('nome')
@@ -129,13 +215,13 @@ def create_device():
                 mysql.connection.commit()
                 cursor.close()
 
-                return jsonify({"success": True, "message": "Dispositivo cadastrado com sucesso!"})
+                return jsonify({"success": True, "message": "Dispositivo adcionado com sucesso!"})
             except Exception as e:
-                return jsonify({"success": False, "message": f"Erro ao cadastrar dispositivo: {str(e)}"})
+                return jsonify({"success": False, "message": f"Erro ao adcionar o dispositivo: {str(e)}"})
         else:
             return jsonify({"success": False, "message": "Os campos Nome, MAC Address e IP são obrigatórios."})
 
-    return render_template('createdevice.html')
+    return render_template('adddevice.html')
 
 @app.route('/createuser', methods=['GET', 'POST'])
 @login_required
@@ -251,6 +337,53 @@ def deletar_usuarios():
                 flash(f'Erro ao excluir usuário: {str(e)}', 'danger')
 
     return render_template('deletarusuarios.html', usuarios=usuarios)
+
+
+
+@app.route('/deletemodel', methods=['GET', 'POST'])
+@login_required
+def deletemodel():
+    # Conectar ao banco de dados e obter todos os modelos
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id_modelo, nome FROM modelo")  # Assumindo que 'nome' representa o nome da pasta
+    modelos = cursor.fetchall()
+    cursor.close()
+
+    if request.method == 'POST':  # Se a requisição é POST
+        modelos_para_deletar = request.form.getlist('modelos_para_deletar')  # Obtém os IDs dos modelos selecionados
+
+        if modelos_para_deletar:  # Se algum modelo foi selecionado
+            try:
+                cursor = mysql.connection.cursor()
+                for modelo_id in modelos_para_deletar:
+                    # Obter o nome do modelo (usado para o nome da pasta)
+                    cursor.execute("SELECT nome FROM modelo WHERE id_modelo = %s", (modelo_id,))
+                    modelo_nome = cursor.fetchone()
+
+                    if modelo_nome:
+                        modelo_folder = os.path.join('scripts', modelo_nome[0])  # Caminho da pasta do modelo
+
+                        # Remover a pasta e seus arquivos
+                        if os.path.exists(modelo_folder):
+                            for root, dirs, files in os.walk(modelo_folder, topdown=False):
+                                for file in files:
+                                    os.remove(os.path.join(root, file))
+                                for dir in dirs:
+                                    os.rmdir(os.path.join(root, dir))
+                            os.rmdir(modelo_folder)
+
+                    # Deletar o registro do modelo no banco de dados
+                    cursor.execute("DELETE FROM modelo WHERE id_modelo = %s", (modelo_id,))
+
+                mysql.connection.commit()
+                cursor.close()
+
+                flash('Modelos excluídos com sucesso!', 'success')
+                return redirect(url_for('deletemodel'))
+            except Exception as e:
+                flash(f'Erro ao excluir modelo: {str(e)}', 'danger')
+
+    return render_template('deletemodel.html', modelos=modelos)
 
 
 

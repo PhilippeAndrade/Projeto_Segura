@@ -1,5 +1,12 @@
 use segura;
 
+CREATE TABLE IF NOT EXISTS usuarios (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL
+);
+
+
 CREATE TABLE IF NOT EXISTS modelo (
 id_modelo int auto_increment,
 nome varchar(70) not null,

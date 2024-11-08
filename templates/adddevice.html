@@ -81,7 +81,7 @@
         <h2>Menu</h2>
         <a href="/createdevice" class="active"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
         <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
-        <a href="/editdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
+        <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
         <a href="/deletedevices"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
@@ -164,7 +164,7 @@
             submitBtn.addEventListener("click", function() {
                 if (validateForm()) {
                     $.ajax({
-                        url: "{{ url_for('create_device') }}",
+                        url: "{{ url_for('add_device') }}",
                         type: "POST",
                         contentType: "application/json",
                         data: JSON.stringify({

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Modelos</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { display: flex; min-height: 100vh; background-color: #f8f9fa; }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+        }
+        .sidebar h2 { font-size: 1.5rem; text-align: center; margin-bottom: 1rem; }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+        .content { flex-grow: 1; padding: 0px; display: flex; justify-content: center; align-items: flex-start; }
+        .form-container { max-width: 600px; margin-top: 0px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; }
+        .message-box { font-size: 0.9rem; margin-top: 15px; opacity: 1; transition: opacity 2s ease; }
+    </style>
+</head>
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/addmodel"><i class="fas fa-cube"></i> Cadastrar Modelo</a>
+        <a href="/viewmodel" class="active"><i class="fas fa-eye"></i> Visualizar Modelos</a>
+        <a href="/altermodel"><i class="fas fa-edit"></i> Alterar Modelos</a>
+        <a href="/deletemodel"><i class="fas fa-trash-alt"></i> Deletar Modelos</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Modelos Cadastrados</h2>
+
+            <!-- Mensagem de sucesso -->
+            <div id="resultMessage" class="message-box" style="display: none;"></div>
+
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Nome do Modelo</th>
+                        <th>Fabricante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for modelo in modelos %}
+                    <tr>
+                        <td>{{ modelo[1] }}</td> <!-- Exibe o nome do modelo -->
+                        <td>{{ modelo[2] }}</td> <!-- Exibe o fabricante -->
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            <a href="/addmodel" class="btn btn-primary mt-3">Voltar para Cadastrar Modelo</a>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Função para exibir a mensagem de resultado dentro do form-container
+        function showResultMessage(message, isSuccess = true) {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.textContent = message;
+            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
+            resultMessage.style.display = 'block';
+            resultMessage.style.opacity = 1;
+
+            // Gradualmente desaparece após 2 segundos
+            setTimeout(() => {
+                resultMessage.style.opacity = 0;
+                setTimeout(() => {
+                    resultMessage.style.display = 'none';
+                }, 2000); // 2 segundos para desaparecer
+            }, 2000); // Exibe por 2 segundos antes de começar a desaparecer
+        }
+
+        // Exemplo de teste para visualizar a mensagem
+        // showResultMessage("Modelos visualizados com sucesso!", true);
+    </script>
+
+</body>
+</html>
