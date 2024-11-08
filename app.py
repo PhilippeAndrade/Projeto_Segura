@@ -81,6 +81,32 @@ def login():
 def dashboard():
     return render_template('dashboard.html')  # Renderiza o dashboard
 
+@app.route('/createmodel', methods=['GET', 'POST'])
+@login_required
+def create_model():
+    if request.method == 'POST' and request.is_json:
+        data = request.get_json()
+        nome = data.get('nome')
+        fabricante = data.get('fabricante')
+
+        if nome and fabricante:  # Verifica se ambos os campos foram preenchidos
+            try:
+                # Insere o novo modelo no banco de dados
+                cursor = mysql.connection.cursor()
+                cursor.execute("INSERT INTO modelo (nome, fabricante) VALUES (%s, %s)", (nome, fabricante))
+                mysql.connection.commit()
+                cursor.close()
+                
+                # Retorna um JSON com sucesso
+                return jsonify({"success": True, "message": "Modelo criado com sucesso!"})
+            except Exception as e:
+                return jsonify({"success": False, "message": f"Erro ao criar modelo: {str(e)}"})
+        else:
+            return jsonify({"success": False, "message": "Todos os campos são obrigatórios."})
+
+    return render_template('createmodel.html')  # Renderiza a página para criar modelos
+
+
 
 @app.route('/createdevice', methods=['GET', 'POST'])
 @login_required
