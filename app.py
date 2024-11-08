@@ -385,7 +385,16 @@ def deletemodel():
 
     return render_template('deletemodel.html', modelos=modelos)
 
+@app.route('/creategroup')
+@login_required
+def create_group():
+    return render_template('creategroup.html')
 
+# Rota para gerenciar dispositivos
+@app.route('/managerdevices')
+@login_required
+def manager_devices():
+    return render_template('managerdevices.html')
 
 # Rota para fazer upload de um script
 @app.route('/uploadscript', methods=['GET', 'POST'])
@@ -398,12 +407,6 @@ def upload_script():
         return redirect(url_for('upload_script'))
 
     return render_template('upload_script.html')
-
-# Rota para gerenciar dispositivos
-@app.route('/managerdevices')
-@login_required
-def manager_devices():
-    return render_template('managerdevices.html')
 
 # Tratamento de erro 404
 @app.errorhandler(404)

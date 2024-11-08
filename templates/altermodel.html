@@ -28,7 +28,7 @@
             background-color: #495057;
             color: #ffc107;
         }
-        .content { flex-grow: 1; padding: 30px; }
+        .content { flex-grow: 1; padding: 30px;}
         .form-container { max-width: 800px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
         .btn-warning { background-color: #ffc107; border-color: #ffc107; color: white; }
         .btn-warning:hover { background-color: #e0a800; border-color: #e0a800; }
@@ -57,22 +57,24 @@
             <table class="table table-bordered">
                 <thead>
                     <tr>
-                        <th>Nome do Modelo</th>
-                        <th>Fabricante</th>
-                        <th>Ação</th>
+                        <th class="text-center">Nome do Modelo</th>
+                        <th class="text-center">Fabricante</th>
+                        <th class="text-center">Ação</th>
                     </tr>
                 </thead>
+                
                 <tbody>
                     {% for modelo in modelos %}
                     <tr>
-                        <td>{{ modelo[1] }}</td> <!-- Nome do Modelo -->
-                        <td>{{ modelo[2] }}</td> <!-- Fabricante -->
-                        <td>
+                        <td class="text-center">{{ modelo[1] }}</td> <!-- Nome do Modelo, centralizado -->
+                        <td class="text-center">{{ modelo[2] }}</td> <!-- Fabricante, centralizado -->
+                        <td class="text-center"> <!-- Centraliza o botão "Alterar" -->
                             <button class="btn btn-warning" onclick="openModal('{{ modelo[0] }}', '{{ modelo[1] }}', '{{ modelo[2] }}')">Alterar</button>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
+                
             </table>
 
             <!-- Mensagem de resultado -->

@@ -64,15 +64,15 @@
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>Nome do Modelo</th>
-                            <th>Selecionar para Excluir</th>
+                            <th class="text-center">Nome do Modelo</th>
+                            <th class="text-center">Selecionar para Excluir</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for modelo in modelos %}
                         <tr>
-                            <td>{{ modelo[1] }}</td> <!-- Exibe o nome do modelo -->
-                            <td>
+                            <td class="text-center">{{ modelo[1] }}</td> <!-- Exibe o nome do modelo, centralizado -->
+                            <td class="text-center">
                                 <input type="checkbox" name="modelos_para_deletar" value="{{ modelo[0] }}"> <!-- Checkbox para selecionar o modelo -->
                             </td>
                         </tr>
@@ -110,6 +110,12 @@
 
         // Função para confirmar a exclusão dos modelos
         function confirmModelDeletion() {
+            const selected = document.querySelectorAll('input[name="modelos_para_deletar"]:checked'); // Verifica checkboxes selecionados
+            if (selected.length === 0) { // Nenhum modelo selecionado
+                showResultMessage("Por favor, selecione pelo menos um modelo para excluir.", false);
+                return;
+            }
+
             const confirmDelete = confirm("Tem certeza de que deseja excluir os modelos selecionados?");
             if (confirmDelete) {
                 const formData = $("#deleteModelForm").serialize();

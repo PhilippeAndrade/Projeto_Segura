@@ -78,6 +78,7 @@
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
+        <a href="/creategroup"><i class="fas fa-users"></i> Criar Grupo</a>
         <a href="/managerdevices"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
         <a href="/uploadscript" class="active"><i class="fas fa-upload"></i> Upload de Scripts</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
@@ -89,7 +90,7 @@
             <h3 class="mt-4">Upload de Scripts</h3>
 
             <!-- Formulário de Upload de Scripts -->
-            <form method="POST" enctype="multipart/form-data" action="{{ url_for('create_device') }}">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('add_device') }}">
                 <div class="form-group">
                     <label for="router_model_id">Modelo do Roteador:</label>
                     <select name="router_model_id" class="form-control" required>
