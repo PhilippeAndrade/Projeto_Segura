@@ -25,7 +25,7 @@ mysql = MySQL(app)
 class UserForm(FlaskForm):
     username = StringField('Nome de Usuário', validators=[DataRequired(), Length(min=4, max=25)])  # Campo de usuário com validações
     password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])  # Campo de senha com validações
-    submit = SubmitField('Criar Usuário')  # Botão de submissão do formulário
+    submit = SubmitField('Iniciar a Sessão')  # Botão de submissão do formulário
 
 # Decorador para verificar se o usuário está logado
 def login_required(f):
@@ -385,10 +385,59 @@ def deletemodel():
 
     return render_template('deletemodel.html', modelos=modelos)
 
-@app.route('/creategroup')
+@app.route('/creategroup', methods=['GET', 'POST'])
 @login_required
 def create_group():
+    if request.method == 'POST' and request.is_json:
+        data = request.get_json()
+        nome_grupo = data.get('nome')
+
+        # Verifica se o campo nome_grupo foi preenchido
+        if not nome_grupo:
+            return jsonify({"success": False, "message": "O nome do grupo é obrigatório."})
+
+        try:
+            # Conecta ao banco de dados e insere o novo grupo
+            cursor = mysql.connection.cursor()
+            cursor.execute("INSERT INTO grupo (nome) VALUES (%s)", (nome_grupo,))
+            mysql.connection.commit()
+            cursor.close()
+
+            return jsonify({"success": True, "message": "Grupo criado com sucesso!"})
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Erro ao criar o grupo: {str(e)}"})
+
+    # Renderiza o formulário HTML se o método for GET
     return render_template('creategroup.html')
+
+@app.route('/deletegroup', methods=['GET', 'POST'])
+@login_required
+def delete_group():
+    # Busca todos os grupos do banco de dados
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM grupo")  # Seleciona todos os grupos
+    grupos = cursor.fetchall()
+    cursor.close()
+
+    if request.method == 'POST':  # Se a requisição é POST
+        grupos_para_deletar = request.form.getlist('grupos_para_deletar')  # Obtém os IDs dos grupos
+
+        if grupos_para_deletar:  # Se algum grupo foi selecionado
+            try:
+                cursor = mysql.connection.cursor()
+                for grupo_id in grupos_para_deletar:  # Deleta cada grupo selecionado
+                    cursor.execute("DELETE FROM grupo WHERE id_grupo = %s", (grupo_id,))
+                mysql.connection.commit()
+                cursor.close()
+
+                flash('Grupos excluídos com sucesso!', 'success')
+                return redirect(url_for('delete_group'))
+            except Exception as e:
+                flash(f'Erro ao excluir grupo: {str(e)}', 'danger')
+
+    return render_template('deletegroup.html', grupos=grupos)
+
+
 
 # Rota para gerenciar dispositivos
 @app.route('/managerdevices')
