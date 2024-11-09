@@ -7,7 +7,11 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body { display: flex; min-height: 100vh; background-color: #f8f9fa; }
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+        }
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -16,7 +20,11 @@
             flex-direction: column;
             padding-top: 20px;
         }
-        .sidebar h2 { font-size: 1.5rem; text-align: center; margin-bottom: 1rem; }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
         .sidebar a {
             color: white;
             padding: 15px 20px;
@@ -28,14 +36,60 @@
             background-color: #495057;
             color: #ffc107;
         }
-        .content { flex-grow: 1; padding: 30px; display: flex; justify-content: center; align-items: flex-start; }
-        .form-container { max-width: 600px; width: 100%; background-color: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
-        .message-box {
-            font-size: 0.9rem;
-            margin-top: 15px;
-            opacity: 1;
-            transition: opacity 0.5s ease;
-            text-align: center;
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+        }
+        .form-container {
+            max-width: 800px;
+            width: 100%;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+        /* Estilos para o pop-up de confirmação */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            text-decoration: none;
+            cursor: pointer;
         }
     </style>
 </head>
@@ -59,93 +113,89 @@
             <!-- Elemento para exibir a mensagem de resultado (sucesso ou erro) -->
             <div id="resultMessage" class="message-box" style="display: none;"></div>
 
-            <!-- Formulário para deletar modelos -->
-            <form id="deleteModelForm" action="{{ url_for('deletemodel') }}" method="POST">
-                <table class="table table-bordered">
+            <!-- Tabela para deletar modelos -->
+            <div class="table-container">
+                <table class="table table-striped table-bordered">
                     <thead class="thead-dark">
                         <tr>
                             <th class="text-center">Nome do Modelo</th>
-                            <th class="text-center">Selecionar para Excluir</th>
+                            <th class="text-center">Ações</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for modelo in modelos %}
                         <tr>
-                            <td class="text-center">{{ modelo[1] }}</td> <!-- Exibe o nome do modelo, centralizado -->
+                            <td class="text-center">{{ modelo[1] }}</td> <!-- Nome do modelo -->
                             <td class="text-center">
-                                <input type="checkbox" name="modelos_para_deletar" value="{{ modelo[0] }}"> <!-- Checkbox para selecionar o modelo -->
+                                <button class="btn btn-danger btn-sm" onclick="confirmDelete('{{ modelo[0] }}')">Excluir</button>
                             </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="2" class="text-center">Nenhum modelo cadastrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
-                <button type="button" class="btn btn-danger" onclick="confirmModelDeletion()">Confirmar Exclusão</button>
-                <a href="/deletemodel" class="btn btn-primary">Cancelar</a>
-            </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal de confirmação de exclusão -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h4 class="mb-3">Confirmar Exclusão</h4>
+            <p>Tem certeza de que deseja excluir este modelo? Esta ação não pode ser desfeita.</p>
+            <button type="button" class="btn btn-danger" onclick="deleteModel()">Confirmar Exclusão</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
         </div>
     </div>
 
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
-    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
-
     <script>
-        // Função para exibir a mensagem de resultado
-        function showResultMessage(message, isSuccess = true) {
-            const resultMessage = document.getElementById('resultMessage');
-            resultMessage.textContent = message;
-            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
-            resultMessage.style.display = 'block';
-            resultMessage.style.opacity = 1;
+        let modelToDelete = null;
 
-            // Configura um timer para esconder a mensagem após 2 segundos
-            setTimeout(() => {
-                resultMessage.style.opacity = 0;
-                setTimeout(() => {
-                    resultMessage.style.display = 'none';
-                }, 500);
-            }, 2000);
+        function confirmDelete(id_modelo) {
+            modelToDelete = id_modelo;  // Armazena o ID do modelo a ser excluído
+            document.getElementById("deleteModal").style.display = "block";
         }
 
-        // Função para confirmar a exclusão dos modelos
-        function confirmModelDeletion() {
-            const selected = document.querySelectorAll('input[name="modelos_para_deletar"]:checked'); // Verifica checkboxes selecionados
-            if (selected.length === 0) { // Nenhum modelo selecionado
-                showResultMessage("Por favor, selecione pelo menos um modelo para excluir.", false);
-                return;
-            }
+        function closeModal() {
+            document.getElementById("deleteModal").style.display = "none";
+            modelToDelete = null;  // Reseta o ID do modelo a ser excluído
+        }
 
-            const confirmDelete = confirm("Tem certeza de que deseja excluir os modelos selecionados?");
-            if (confirmDelete) {
-                const formData = $("#deleteModelForm").serialize();
-                
-                $.ajax({
-                    url: "{{ url_for('deletemodel') }}",
-                    type: "POST",
-                    data: formData,
-                    success: function(response) {
-                        localStorage.setItem('deleteSuccessMessage', "Modelos excluídos com sucesso!");
-                        window.location.reload();
-                    },
-                    error: function() {
-                        showResultMessage("Erro ao excluir modelos.", false);
+        function deleteModel() {
+            if (!modelToDelete) return;
+
+            $.ajax({
+                url: `/delete_model/${modelToDelete}`,  // Rota de exclusão
+                type: "POST",
+                success: function(response) {
+                    if (response.success) {
+                        $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
+                        closeModal();
+                        setTimeout(function() {
+                            location.reload();  // Recarrega a página para atualizar a lista de modelos
+                        }, 2000);
+                    } else {
+                        $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
                     }
-                });
-            } else {
-                showResultMessage("Operação cancelada.", false);
-            }
+                },
+                error: function() {
+                    $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o modelo. Tente novamente.</span>`);
+                }
+            });
         }
 
-        // Exibe a mensagem armazenada no localStorage ao carregar a página
-        window.addEventListener('load', () => {
-            const message = localStorage.getItem('deleteSuccessMessage');
-            if (message) {
-                showResultMessage(message, true);
-                localStorage.removeItem('deleteSuccessMessage');
+        // Fecha o modal ao clicar fora dele
+        window.onclick = function(event) {
+            if (event.target == document.getElementById("deleteModal")) {
+                closeModal();
             }
-        });
+        }
     </script>
-
 </body>
 </html>

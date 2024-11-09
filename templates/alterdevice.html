@@ -57,13 +57,14 @@
             margin-top: 20px;
             overflow-x: auto;
         }
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
+        .btn-warning {
+            background-color: #ffc107;
+            border-color: #ffc107;
+            color: white;
         }
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
+        .btn-warning:hover {
+            background-color: #e0a800;
+            border-color: #e0a800;
         }
         .modal {
             display: none;
@@ -134,7 +135,7 @@
                             <td>{{ dispositivo.grupo_nome }}</td>
                             <td>{{ dispositivo.ip }}</td>
                             <td>
-                                <button class="btn btn-primary btn-sm" onclick="openModal('{{ dispositivo.id_dispositivo }}')">Alterar</button>
+                                <button class="btn btn-warning btn-sm" onclick="openModal('{{ dispositivo.id_dispositivo }}')">Alterar</button>
                             </td>
                         </tr>
                         {% else %}
@@ -184,7 +185,7 @@
                     <label for="editIp">Endereço IP</label>
                     <input type="text" id="editIp" class="form-control">
                 </div>
-                <button type="button" class="btn btn-primary" onclick="saveChanges()">Salvar Alterações</button>
+                <button type="button" class="btn btn-warning" onclick="saveChanges()">Salvar Alterações</button>
             </form>
         </div>
     </div>

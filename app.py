@@ -483,29 +483,33 @@ def visualizar_usuarios():
 @app.route('/deletarusuarios', methods=['GET', 'POST'])
 @login_required
 def deletar_usuarios():
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM usuarios")  # Seleciona todos os usuários
-    usuarios = cursor.fetchall()
-    cursor.close()
+    if request.method == 'POST':
+        # Recebe o ID do usuário enviado por uma requisição AJAX para exclusão
+        user_id = request.json.get('id')  # Assumindo que o ID do usuário vem no corpo JSON
 
-    if request.method == 'POST':  # Se a requisição é POST
-        usuarios_para_deletar = request.form.getlist('usuarios_para_deletar')  # Obtém os IDs dos usuários
-
-        if usuarios_para_deletar:  # Se algum usuário foi selecionado
+        if user_id:
             try:
                 cursor = mysql.connection.cursor()
-                for usuario_id in usuarios_para_deletar:  # Deleta cada usuário selecionado
-                    cursor.execute("DELETE FROM usuarios WHERE id = %s", (usuario_id,))
+                cursor.execute("DELETE FROM usuarios WHERE id = %s", (user_id,))
                 mysql.connection.commit()
                 cursor.close()
-
-                flash('Usuários excluídos com sucesso!', 'success')
-                return redirect(url_for('deletar_usuarios'))
+                return jsonify({"success": True, "message": "Usuário excluído com sucesso."})
             except Exception as e:
-                flash(f'Erro ao excluir usuário: {str(e)}', 'danger')
+                print(f"Erro ao excluir usuário {user_id}: {str(e)}")
+                return jsonify({"success": False, "message": f"Erro ao excluir usuário: {str(e)}"}), 500
+        else:
+            return jsonify({"success": False, "message": "ID do usuário não fornecido."}), 400
+    else:
+        # Método GET para listar os usuários
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT id, username FROM usuarios")
+        usuarios = cursor.fetchall()
+        cursor.close()
 
-    return render_template('deletarusuarios.html', usuarios=usuarios)
+        # Converte os dados para uma estrutura de dicionário para facilitar o uso no template
+        usuarios = [{"id": usuario[0], "username": usuario[1]} for usuario in usuarios]
 
+        return render_template('deletarusuarios.html', usuarios=usuarios)
 
 
 @app.route('/deletemodel', methods=['GET', 'POST'])
@@ -579,61 +583,58 @@ def create_group():
     return render_template('creategroup.html')
 
 # Rota para deletar grupos
+# Rota para carregar e deletar grupos
 @app.route('/deletegroup', methods=['GET', 'POST'])
+@login_required
 def delete_group():
-    # Busca todos os grupos para exibir na página
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT * FROM grupo")
     grupos = cursor.fetchall()
     cursor.close()
 
     if request.method == 'POST':
-        grupos_para_deletar = request.form.getlist('grupos_para_deletar')
+        grupos_para_deletar = request.json.get('grupos_para_deletar')
 
         if not grupos_para_deletar:
-            flash("Por favor, selecione pelo menos um grupo para excluir.", "danger")
-            return redirect(url_for('delete_group'))
+            return jsonify({"success": False, "message": "Nenhum grupo selecionado para exclusão."}), 400
 
         grupos_com_dispositivos = []
         dispositivos_por_grupo = {}
 
         cursor = mysql.connection.cursor()
-        # Verifica se cada grupo possui dispositivos associados
         for grupo_id in grupos_para_deletar:
             cursor.execute("SELECT d.nome FROM dispositivos d WHERE d.id_grupo = %s", (grupo_id,))
             dispositivos = cursor.fetchall()
 
-            # Se o grupo possui dispositivos, armazena informações para exibir mensagem de erro
             if dispositivos:
                 grupos_com_dispositivos.append(grupo_id)
                 dispositivos_por_grupo[grupo_id] = [dispositivo[0] for dispositivo in dispositivos]
 
-        cursor.close()
-
-        # Se houver grupos com dispositivos associados, exibe mensagem de erro e detalhes
         if grupos_com_dispositivos:
             error_message = "Existem dispositivos associados aos grupos selecionados. Desassocie os dispositivos antes de continuar."
             for grupo_id in grupos_com_dispositivos:
                 nome_grupo = next((grupo[1] for grupo in grupos if grupo[0] == grupo_id), "Dispositivos encontrados")
                 dispositivos = ", ".join(dispositivos_por_grupo[grupo_id])
                 error_message += f"<br><strong>{nome_grupo}:</strong> {dispositivos}"
-            flash(error_message, "danger")
-            return redirect(url_for('delete_group'))
+            cursor.close()
+            return jsonify({"success": False, "message": error_message}), 400
 
-        # Se não houver dispositivos associados, exclui os grupos
+        # Deletar grupos sem dispositivos associados
         try:
-            cursor = mysql.connection.cursor()
             for grupo_id in grupos_para_deletar:
                 cursor.execute("DELETE FROM grupo WHERE id_grupo = %s", (grupo_id,))
             mysql.connection.commit()
             cursor.close()
-            flash("Grupos excluídos com sucesso!", "success")
+            return jsonify({"success": True, "message": "Grupos excluídos com sucesso!"})
         except Exception as e:
-            flash(f"Erro ao excluir grupo: {str(e)}", "danger")
-        
-        return redirect(url_for('delete_group'))
+            print(f"Erro ao excluir grupos: {str(e)}")
+            cursor.close()
+            return jsonify({"success": False, "message": f"Erro ao excluir grupos: {str(e)}"}), 500
 
     return render_template('deletegroup.html', grupos=grupos)
+
+
+
 
 
 
