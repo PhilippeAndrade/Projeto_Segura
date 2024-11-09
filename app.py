@@ -1,5 +1,5 @@
 # Importa as bibliotecas necessárias para o aplicativo Flask
-from flask import Flask, render_template, redirect, url_for, flash, session, request, jsonify, current_app
+from flask import Flask, render_template, redirect, url_for, flash, session, request, jsonify
 from flask_mysqldb import MySQL  # Para conectar com o MySQL
 from flask_wtf import FlaskForm  # Para formulários seguros com Flask-WTF
 from wtforms import StringField, PasswordField, SubmitField  # Campos para o formulário
@@ -215,13 +215,181 @@ def add_device():
                 mysql.connection.commit()
                 cursor.close()
 
-                return jsonify({"success": True, "message": "Dispositivo adcionado com sucesso!"})
+                return jsonify({"success": True, "message": "Dispositivo adicionado com sucesso!"})
             except Exception as e:
-                return jsonify({"success": False, "message": f"Erro ao adcionar o dispositivo: {str(e)}"})
+                return jsonify({"success": False, "message": f"Erro ao adicionar o dispositivo: {str(e)}"})
         else:
             return jsonify({"success": False, "message": "Os campos Nome, MAC Address e IP são obrigatórios."})
 
-    return render_template('adddevice.html')
+    # Carrega os modelos e grupos para exibir no formulário
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id_modelo, nome FROM modelo")
+    modelos = cursor.fetchall()
+
+    cursor.execute("SELECT id_grupo, nome FROM grupo")
+    grupos = cursor.fetchall()
+    cursor.close()
+
+    return render_template('adddevice.html', modelos=modelos, grupos=grupos)
+
+@app.route('/viewdevices')
+@login_required
+def view_devices():
+    cursor = mysql.connection.cursor()
+    cursor.execute("""
+        SELECT d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip
+        FROM dispositivos d
+        JOIN modelo m ON d.id_modelo = m.id_modelo
+        JOIN grupo g ON d.id_grupo = g.id_grupo
+    """)
+    dispositivos = cursor.fetchall()
+    cursor.close()
+    
+    # Cada dispositivo será um dicionário para fácil acesso aos dados no template
+    dispositivos = [
+        {
+            "nome": dispositivo[0],
+            "modelo_nome": dispositivo[1],
+            "mac_address": dispositivo[2],
+            "grupo_nome": dispositivo[3],
+            "ip": dispositivo[4]
+        }
+        for dispositivo in dispositivos
+    ]
+    
+    return render_template('viewdevice.html', dispositivos=dispositivos)
+
+@app.route('/get_device/<int:id_dispositivo>')
+@login_required
+def get_device(id_dispositivo):
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT * FROM dispositivos WHERE id_dispositivo = %s", (id_dispositivo,))
+    dispositivo = cursor.fetchone()
+    cursor.close()
+    if dispositivo:
+        return jsonify({
+            "id_dispositivo": dispositivo[0],
+            "nome": dispositivo[1],
+            "id_modelo": dispositivo[2],
+            "mac_address": dispositivo[3],
+            "id_grupo": dispositivo[4],
+            "ip": dispositivo[5]
+        })
+    return jsonify({"success": False, "message": "Dispositivo não encontrado."})
+
+
+
+@app.route('/update_device/<int:id_dispositivo>', methods=['POST'])
+@login_required
+def update_device(id_dispositivo):
+    data = request.get_json()
+    nome = data.get("nome")
+    id_modelo = data.get("id_modelo")
+    mac_address = data.get("mac_address")
+    id_grupo = data.get("id_grupo")
+    ip = data.get("ip")
+
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("""
+            UPDATE dispositivos
+            SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s
+            WHERE id_dispositivo = %s
+        """, (nome, id_modelo, mac_address, id_grupo, ip, id_dispositivo))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({"success": True, "message": "Dispositivo atualizado com sucesso."})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Erro ao atualizar dispositivo: {str(e)}"})
+
+
+
+@app.route('/alterdevices')
+@login_required
+def alter_devices():
+    cursor = mysql.connection.cursor()
+    
+    # Atualiza a consulta SQL para usar id_dispositivo
+    cursor.execute("""
+        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip
+        FROM dispositivos d
+        JOIN modelo m ON d.id_modelo = m.id_modelo
+        JOIN grupo g ON d.id_grupo = g.id_grupo
+    """)
+    dispositivos = cursor.fetchall()
+    
+    cursor.execute("SELECT id_modelo AS id, nome FROM modelo")
+    modelos = cursor.fetchall()
+    
+    cursor.execute("SELECT id_grupo AS id, nome FROM grupo")
+    grupos = cursor.fetchall()
+    
+    cursor.close()
+    
+    # Converte os dados para uma estrutura de dicionário para facilitar o uso no template
+    dispositivos = [
+        {
+            "id_dispositivo": dispositivo[0],  # Usando id_dispositivo como chave
+            "nome": dispositivo[1],
+            "modelo_nome": dispositivo[2],
+            "mac_address": dispositivo[3],
+            "grupo_nome": dispositivo[4],
+            "ip": dispositivo[5]
+        }
+        for dispositivo in dispositivos
+    ]
+    
+    modelos = [{"id": modelo[0], "nome": modelo[1]} for modelo in modelos]
+    grupos = [{"id": grupo[0], "nome": grupo[1]} for grupo in grupos]
+
+    return render_template('alterdevice.html', dispositivos=dispositivos, modelos=modelos, grupos=grupos)
+
+
+@app.route('/deletedevice')
+@login_required
+def delete_devices():
+    cursor = mysql.connection.cursor()
+
+    # Consulta para obter todos os dispositivos
+    cursor.execute("""
+        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip
+        FROM dispositivos d
+        JOIN modelo m ON d.id_modelo = m.id_modelo
+        JOIN grupo g ON d.id_grupo = g.id_grupo
+    """)
+    dispositivos = cursor.fetchall()
+    cursor.close()
+
+    # Converte os dados para uma estrutura de dicionário para facilitar o uso no template
+    dispositivos = [
+        {
+            "id_dispositivo": dispositivo[0],
+            "nome": dispositivo[1],
+            "modelo_nome": dispositivo[2],
+            "mac_address": dispositivo[3],
+            "grupo_nome": dispositivo[4],
+            "ip": dispositivo[5]
+        }
+        for dispositivo in dispositivos
+    ]
+
+    return render_template('deletedevice.html', dispositivos=dispositivos)
+
+@app.route('/delete_device/<int:id_dispositivo>', methods=['POST'])
+@login_required
+def delete_device(id_dispositivo):
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("DELETE FROM dispositivos WHERE id_dispositivo = %s", (id_dispositivo,))
+        mysql.connection.commit()
+        cursor.close()
+        return jsonify({"success": True, "message": "Dispositivo excluído com sucesso."})
+    except Exception as e:
+        # Exibe o erro no console para depuração
+        print(f"Erro ao excluir dispositivo {id_dispositivo}: {str(e)}")
+        return jsonify({"success": False, "message": f"Erro ao excluir dispositivo: {str(e)}"}), 500
+
+
 
 @app.route('/createuser', methods=['GET', 'POST'])
 @login_required
@@ -410,52 +578,181 @@ def create_group():
     # Renderiza o formulário HTML se o método for GET
     return render_template('creategroup.html')
 
+# Rota para deletar grupos
 @app.route('/deletegroup', methods=['GET', 'POST'])
-@login_required
 def delete_group():
-    # Busca todos os grupos do banco de dados
+    # Busca todos os grupos para exibir na página
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM grupo")  # Seleciona todos os grupos
+    cursor.execute("SELECT * FROM grupo")
     grupos = cursor.fetchall()
     cursor.close()
 
-    if request.method == 'POST':  # Se a requisição é POST
-        grupos_para_deletar = request.form.getlist('grupos_para_deletar')  # Obtém os IDs dos grupos
+    if request.method == 'POST':
+        grupos_para_deletar = request.form.getlist('grupos_para_deletar')
 
-        if grupos_para_deletar:  # Se algum grupo foi selecionado
-            try:
-                cursor = mysql.connection.cursor()
-                for grupo_id in grupos_para_deletar:  # Deleta cada grupo selecionado
-                    cursor.execute("DELETE FROM grupo WHERE id_grupo = %s", (grupo_id,))
-                mysql.connection.commit()
-                cursor.close()
+        if not grupos_para_deletar:
+            flash("Por favor, selecione pelo menos um grupo para excluir.", "danger")
+            return redirect(url_for('delete_group'))
 
-                flash('Grupos excluídos com sucesso!', 'success')
-                return redirect(url_for('delete_group'))
-            except Exception as e:
-                flash(f'Erro ao excluir grupo: {str(e)}', 'danger')
+        grupos_com_dispositivos = []
+        dispositivos_por_grupo = {}
+
+        cursor = mysql.connection.cursor()
+        # Verifica se cada grupo possui dispositivos associados
+        for grupo_id in grupos_para_deletar:
+            cursor.execute("SELECT d.nome FROM dispositivos d WHERE d.id_grupo = %s", (grupo_id,))
+            dispositivos = cursor.fetchall()
+
+            # Se o grupo possui dispositivos, armazena informações para exibir mensagem de erro
+            if dispositivos:
+                grupos_com_dispositivos.append(grupo_id)
+                dispositivos_por_grupo[grupo_id] = [dispositivo[0] for dispositivo in dispositivos]
+
+        cursor.close()
+
+        # Se houver grupos com dispositivos associados, exibe mensagem de erro e detalhes
+        if grupos_com_dispositivos:
+            error_message = "Existem dispositivos associados aos grupos selecionados. Desassocie os dispositivos antes de continuar."
+            for grupo_id in grupos_com_dispositivos:
+                nome_grupo = next((grupo[1] for grupo in grupos if grupo[0] == grupo_id), "Dispositivos encontrados")
+                dispositivos = ", ".join(dispositivos_por_grupo[grupo_id])
+                error_message += f"<br><strong>{nome_grupo}:</strong> {dispositivos}"
+            flash(error_message, "danger")
+            return redirect(url_for('delete_group'))
+
+        # Se não houver dispositivos associados, exclui os grupos
+        try:
+            cursor = mysql.connection.cursor()
+            for grupo_id in grupos_para_deletar:
+                cursor.execute("DELETE FROM grupo WHERE id_grupo = %s", (grupo_id,))
+            mysql.connection.commit()
+            cursor.close()
+            flash("Grupos excluídos com sucesso!", "success")
+        except Exception as e:
+            flash(f"Erro ao excluir grupo: {str(e)}", "danger")
+        
+        return redirect(url_for('delete_group'))
 
     return render_template('deletegroup.html', grupos=grupos)
 
 
 
 # Rota para gerenciar dispositivos
-@app.route('/managerdevices')
-@login_required
+@app.route('/managerdevices', methods=['GET', 'POST'])
 def manager_devices():
-    return render_template('managerdevices.html')
-
-# Rota para fazer upload de um script
-@app.route('/uploadscript', methods=['GET', 'POST'])
-def upload_script():
-    if request.method == 'POST':  # Se a requisição é POST
-        router_model_id = request.form['router_model_id']
-        script_file = request.files['script_file']
+    if request.method == 'POST':
+        # Filtragem de dispositivos por grupo usando AJAX
+        group_id = request.json.get('group_id')  # Recebe o `group_id` via JSON no corpo da requisição
         
-        # Processa o upload (exemplo)
+        cursor = mysql.connection.cursor()
+        # Filtra os dispositivos pelo grupo especificado, ou retorna todos se `group_id` estiver vazio
+        if group_id:
+            cursor.execute("""
+                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+                FROM dispositivos d
+                LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+                LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+                WHERE d.id_grupo = %s
+            """, (group_id,))
+        else:
+            cursor.execute("""
+                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+                FROM dispositivos d
+                LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+                LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+            """)
+        
+        dispositivos = cursor.fetchall()
+        cursor.close()
+        
+        # Formata os dispositivos para o formato JSON
+        dispositivos_list = [
+            {
+                "id_dispositivo": dispositivo[0],
+                "nome": dispositivo[1],
+                "modelo_nome": dispositivo[2],
+                "grupo_nome": dispositivo[3],
+                "mac_address": dispositivo[4],
+                "ip": dispositivo[5]
+            }
+            for dispositivo in dispositivos
+        ]
+
+        # Retorna a lista de dispositivos filtrados como JSON
+        return jsonify({"devices": dispositivos_list})
+
+    # Método GET para carregar a página de gerenciamento com todos os grupos e dispositivos
+    cursor = mysql.connection.cursor()
+
+    # Carregar todos os grupos
+    cursor.execute("SELECT id_grupo, nome FROM grupo")
+    grupos = cursor.fetchall()
+
+    # Carregar todos os dispositivos
+    cursor.execute("""
+        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+        FROM dispositivos d
+        LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+        LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+    """)
+    dispositivos = cursor.fetchall()
+    cursor.close()
+
+    # Renderiza o template com todos os dispositivos e grupos para o carregamento inicial
+    return render_template('managerdevices.html', dispositivos=dispositivos, grupos=grupos)
+
+#Rota para upload de scripts
+@app.route('/uploadscript', methods=['GET', 'POST'])
+@login_required
+def upload_script():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    scripts_path = os.path.join(base_dir, 'scripts')
+
+    # Busca os modelos que têm pastas existentes
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT id_modelo, nome FROM modelo")
+    modelos = cursor.fetchall()
+    cursor.close()
+
+    # Adiciona o caminho da pasta associada a cada modelo
+    modelos_com_pasta = [
+        {"id": modelo[0], "nome": modelo[1], "folder_path": os.path.join(scripts_path, modelo[1])}
+        for modelo in modelos
+        if os.path.exists(os.path.join(scripts_path, modelo[1]))
+    ]
+
+    if request.method == 'POST':
+        router_model_id = request.form['router_model_id']
+        script_files = request.files.getlist('script_file')  # Recebe múltiplos arquivos
+
+        # Obter o nome do modelo e verificar a existência da pasta
+        modelo_nome = next((modelo['nome'] for modelo in modelos_com_pasta if str(modelo['id']) == router_model_id), None)
+
+        if not modelo_nome:
+            flash("Erro: A pasta do modelo selecionado não existe.", "danger")
+            return redirect(url_for('upload_script'))
+
+        upload_folder = os.path.join(scripts_path, modelo_nome)
+
+        # Salva cada arquivo se ele for .py e a pasta do modelo existir
+        for script_file in script_files:
+            if script_file.filename.endswith('.py'):  # Verifica se o arquivo é .py
+                if os.path.isdir(upload_folder):
+                    script_file.save(os.path.join(upload_folder, script_file.filename))
+                else:
+                    flash("Erro: A pasta para o modelo selecionado não está disponível.", "danger")
+                    return redirect(url_for('upload_script'))
+            else:
+                flash(f"O arquivo {script_file.filename} não é um arquivo Python (.py).", "danger")
+                return redirect(url_for('upload_script'))
+
+        flash("Scripts carregados com sucesso!", "success")
         return redirect(url_for('upload_script'))
 
-    return render_template('upload_script.html')
+    return render_template('upload_script.html', router_models=modelos_com_pasta)
+
+
+
 
 # Tratamento de erro 404
 @app.errorhandler(404)

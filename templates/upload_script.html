@@ -8,11 +8,15 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
+        /* Estilo base da página */
         body {
             display: flex;
             min-height: 100vh;
+            margin: 0;
             background-color: #f8f9fa;
         }
+
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -20,7 +24,10 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
-            transition: all 0.3s ease;
+            height: 100vh; /* Mantém o sidebar preenchendo a tela */
+            position: fixed; /* Fixado no lado esquerdo */
+            top: 0;
+            left: 0;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -33,18 +40,24 @@
             font-size: 1.1rem;
             transition: background 0.3s ease;
             text-decoration: none;
+            display: block;
         }
         .sidebar a:hover, .sidebar a.active {
             background-color: #495057;
             color: #ffc107;
         }
+
+        /* Content Area */
         .content {
             flex-grow: 1;
+            margin-left: 250px; /* Ajusta o conteúdo para a largura do sidebar */
             padding: 30px;
             display: flex;
             justify-content: center;
             align-items: flex-start;
         }
+
+        /* Form Container */
         .form-container {
             max-width: 600px;
             width: 100%;
@@ -54,6 +67,8 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             text-align: center;
         }
+
+        /* Botão principal */
         .btn-primary {
             background-color: #007bff;
             border-color: #007bff;
@@ -62,20 +77,10 @@
             background-color: #0056b3;
             border-color: #0056b3;
         }
-        .btn-warning {
-            background-color: #ffc107;
-            border-color: #ffc107;
-            color: white;
-        }
-        .btn-warning:hover {
-            background-color: #e0a800;
-            border-color: #e0a800;
-        }
     </style>
 </head>
 <body>
-
-    <!-- Sidebar -->
+    <!-- Sidebar de navegação -->
     <div class="sidebar">
         <h2>Menu</h2>
         <a href="/creategroup"><i class="fas fa-users"></i> Criar Grupo</a>
@@ -85,24 +90,37 @@
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
-    <!-- Content -->
+    <!-- Área de conteúdo principal -->
     <div class="content">
         <div class="form-container">
             <h3 class="mt-4">Upload de Scripts</h3>
 
+            <!-- Exibe mensagens de erro e sucesso -->
+            {% with messages = get_flashed_messages(with_categories=true) %}
+              {% if messages %}
+                {% for category, message in messages %}
+                  <div class="alert alert-{{ category }} mt-2">{{ message }}</div>
+                {% endfor %}
+              {% endif %}
+            {% endwith %}
+
             <!-- Formulário de Upload de Scripts -->
-            <form method="POST" enctype="multipart/form-data" action="{{ url_for('add_device') }}">
+            <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_script') }}">
                 <div class="form-group">
                     <label for="router_model_id">Modelo do Roteador:</label>
-                    <select name="router_model_id" class="form-control" required>
-                        {% for model in router_models %}
-                        <option value="{{ model.id }}">{{ model.model_name }}</option>
-                        {% endfor %}
+                    <select name="router_model_id" id="router_model_id" class="form-control" required>
+                        {% if router_models %}
+                            {% for model in router_models %}
+                            <option value="{{ model['id'] }}">{{ model['nome'] }}</option>
+                            {% endfor %}
+                        {% else %}
+                            <option value="">Nenhum modelo com pasta disponível</option>
+                        {% endif %}
                     </select>
                 </div>
                 <div class="form-group">
-                    <label for="script_file">Arquivo do Script:</label>
-                    <input type="file" name="script_file" class="form-control" required>
+                    <label for="script_file">Arquivos de Script (.py):</label>
+                    <input type="file" name="script_file" id="script_file" class="form-control" required accept=".py" multiple>
                 </div>
                 <button type="submit" class="btn btn-primary">Carregar Script</button>
             </form>
@@ -110,6 +128,5 @@
             <a href="/dashboard" class="btn btn-primary mt-3">Voltar ao Dashboard</a>
         </div>
     </div>
-
 </body>
 </html>

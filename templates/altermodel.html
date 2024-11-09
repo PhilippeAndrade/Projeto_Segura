@@ -37,7 +37,7 @@
 </head>
 <body>
 
-        <!-- Sidebar -->
+    <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
         <a href="/addmodel"><i class="fas fa-cube"></i> Cadastrar Modelo</a>
@@ -46,7 +46,6 @@
         <a href="/deletemodel"><i class="fas fa-trash-alt"></i> Deletar Modelos</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
-    
 
     <!-- Content -->
     <div class="content">
@@ -55,14 +54,13 @@
 
             <!-- Tabela com modelos e botão para alterar detalhes -->
             <table class="table table-bordered">
-                <thead>
+                <thead class="thead-dark">
                     <tr>
                         <th class="text-center">Nome do Modelo</th>
                         <th class="text-center">Fabricante</th>
                         <th class="text-center">Ação</th>
                     </tr>
                 </thead>
-                
                 <tbody>
                     {% for modelo in modelos %}
                     <tr>
@@ -74,7 +72,6 @@
                     </tr>
                     {% endfor %}
                 </tbody>
-                
             </table>
 
             <!-- Mensagem de resultado -->

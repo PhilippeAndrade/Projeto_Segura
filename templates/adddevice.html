@@ -75,14 +75,13 @@
     </style>
 </head>
 <body>
-
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
-        <a href="/createdevice" class="active"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
+        <a href="/adddevice" class="active"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
         <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
         <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
-        <a href="/deletedevices"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
+        <a href="/deletedevice"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
@@ -97,8 +96,13 @@
                     <small class="error-message" id="nomeError">O nome do dispositivo é obrigatório.</small>
                 </div>
                 <div class="form-group">
-                    <label for="id_modelo" class="font-weight-bold">ID do Modelo</label>
-                    <input type="number" id="id_modelo" class="form-control" placeholder="ID do Modelo">
+                    <label for="id_modelo" class="font-weight-bold">Modelo</label>
+                    <select id="id_modelo" class="form-control">
+                        <option value="">Selecione o modelo</option>
+                        {% for modelo in modelos %}
+                            <option value="{{ modelo[0] }}">{{ modelo[1] }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="mac_address" class="font-weight-bold">MAC Address</label>
@@ -106,8 +110,13 @@
                     <small class="error-message" id="macAddressError">O MAC Address é obrigatório.</small>
                 </div>
                 <div class="form-group">
-                    <label for="id_grupo" class="font-weight-bold">ID do Grupo</label>
-                    <input type="number" id="id_grupo" class="form-control" placeholder="ID do Grupo">
+                    <label for="id_grupo" class="font-weight-bold">Grupo</label>
+                    <select id="id_grupo" class="form-control">
+                        <option value="">Selecione o grupo</option>
+                        {% for grupo in grupos %}
+                            <option value="{{ grupo[0] }}">{{ grupo[1] }}</option>
+                        {% endfor %}
+                    </select>
                 </div>
                 <div class="form-group">
                     <label for="ip" class="font-weight-bold">Endereço IP</label>
@@ -136,7 +145,9 @@
 
             function validateForm() {
                 let valid = true;
+                resultMessage.innerHTML = "";  // Limpa a mensagem de erro anterior
 
+                // Validação para o campo Nome
                 if (nomeField.value.trim() === "") {
                     document.getElementById("nomeError").style.display = "block";
                     valid = false;
@@ -144,6 +155,14 @@
                     document.getElementById("nomeError").style.display = "none";
                 }
 
+                // Validação para o campo Modelo
+                if (idModeloField.value === "") {
+                    resultMessage.innerHTML = `<span class="text-danger">Selecione um modelo para poder adicionar o dispositivo</span>`;
+                    resultMessage.style.opacity = 1;
+                    valid = false;
+                }
+
+                // Validação para o campo MAC Address
                 if (macAddressField.value.trim() === "") {
                     document.getElementById("macAddressError").style.display = "block";
                     valid = false;
@@ -151,6 +170,14 @@
                     document.getElementById("macAddressError").style.display = "none";
                 }
 
+                // Validação para o campo Grupo
+                if (idGrupoField.value === "") {
+                    resultMessage.innerHTML = `<span class="text-danger">Selecione o grupo para poder adicionar o dispositivo</span>`;
+                    resultMessage.style.opacity = 1;
+                    valid = false;
+                }
+
+                // Validação para o campo IP
                 if (ipField.value.trim() === "") {
                     document.getElementById("ipError").style.display = "block";
                     valid = false;
