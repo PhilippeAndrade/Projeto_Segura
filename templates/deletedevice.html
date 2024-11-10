@@ -20,7 +20,6 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
-            transition: all 0.3s ease;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -31,8 +30,8 @@
             color: white;
             padding: 15px 20px;
             font-size: 1.1rem;
-            transition: background 0.3s ease;
             text-decoration: none;
+            transition: background 0.3s ease;
         }
         .sidebar a:hover, .sidebar a.active {
             background-color: #495057;
@@ -41,9 +40,6 @@
         .content {
             flex-grow: 1;
             padding: 30px;
-        }
-        .content h2 {
-            color: #343a40;
         }
         .form-container {
             max-width: 800px;
@@ -65,7 +61,6 @@
             background-color: #c82333;
             border-color: #bd2130;
         }
-        /* Estilos para o pop-up de confirmação */
         .modal {
             display: none;
             position: fixed;
@@ -94,7 +89,6 @@
         .close:hover,
         .close:focus {
             color: black;
-            text-decoration: none;
             cursor: pointer;
         }
     </style>
@@ -118,12 +112,13 @@
                 <table class="table table-striped table-bordered">
                     <thead class="thead-dark">
                         <tr>
-                            <th scope="col">Nome do Dispositivo</th>
-                            <th scope="col">Modelo</th>
-                            <th scope="col">MAC Address</th>
-                            <th scope="col">Grupo</th>
-                            <th scope="col">Endereço IP</th>
-                            <th scope="col">Ações</th>
+                            <th>Nome do Dispositivo</th>
+                            <th>Modelo</th>
+                            <th>MAC Address</th>
+                            <th>Grupo</th>
+                            <th>Endereço IP</th>
+                            <th>Tipo de Acesso</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -135,12 +130,19 @@
                             <td>{{ dispositivo.grupo_nome }}</td>
                             <td>{{ dispositivo.ip }}</td>
                             <td>
+                                {% if dispositivo.access_type == 'user_password' %}
+                                    Usuário e Senha
+                                {% else %}
+                                    Somente Senha
+                                {% endif %}
+                            </td>
+                            <td>
                                 <button class="btn btn-danger btn-sm" onclick="confirmDelete('{{ dispositivo.id_dispositivo }}')">Excluir</button>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center">Nenhum dispositivo cadastrado.</td>
+                            <td colspan="7" class="text-center">Nenhum dispositivo cadastrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -176,27 +178,33 @@
         }
 
         function deleteDevice() {
-            if (!deviceToDelete) return;
+    if (!deviceToDelete) return;
 
-            $.ajax({
-                url: `/delete_device/${deviceToDelete}`,  // Rota de exclusão
-                type: "POST",
-                success: function(response) {
-                    if (response.success) {
-                        $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
-                        closeModal();
-                        setTimeout(function() {
-                            location.reload();  // Recarrega a página para atualizar a lista de dispositivos
-                        }, 2000);
-                    } else {
-                        $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
-                    }
-                },
-                error: function() {
-                    $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o dispositivo. Tente novamente.</span>`);
-                }
-            });
+    console.log("Tentando excluir dispositivo com ID:", deviceToDelete); // Log para verificar ID do dispositivo
+
+    $.ajax({
+        url: `/deletedevice`,
+        type: "POST",
+        contentType: "application/json",
+        data: JSON.stringify({ id_dispositivo: deviceToDelete }),
+        success: function(response) {
+            console.log("Resposta do servidor:", response); // Log para verificar resposta do servidor
+            if (response.success) {
+                $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
+                closeModal();
+                setTimeout(function() {
+                    location.reload();
+                }, 2000);
+            } else {
+                $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
+            }
+        },
+        error: function() {
+            $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o dispositivo. Tente novamente.</span>`);
+            console.error("Erro na requisição AJAX para exclusão"); // Log de erro
         }
+    });
+}
 
         // Fecha o modal ao clicar fora dele
         window.onclick = function(event) {

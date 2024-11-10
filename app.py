@@ -7,10 +7,26 @@ from wtforms.validators import DataRequired, Length  # Validações para os camp
 import os  # Para manipulação do sistema operacional, como a geração de uma chave secreta
 import bcrypt  # Para criptografar e verificar senhas
 from functools import wraps  # Para criar decoradores personalizados
+from cryptography.fernet import Fernet
 
+
+b'0Ry0Np_T-51ZtqPtzyX0hcrpfcTCa-a15baaZjuiwEk=' 
 # Inicializa o aplicativo Flask
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Gera uma chave secreta aleatória para as sessões
+
+fernet_key = b'0Ry0Np_T-51ZtqPtzyX0hcrpfcTCa-a15baaZjuiwEk='
+cipher_suite = Fernet(fernet_key)
+
+
+# Função para criptografar a senha do dispositivo
+def encrypt_password(password):
+    return cipher_suite.encrypt(password.encode())
+
+# Função para descriptografar a senha do dispositivo
+def decrypt_password(encrypted_password):
+    return cipher_suite.decrypt(encrypted_password).decode()
+
 
 # Configuração para conexão com o banco de dados MySQL
 app.config['MYSQL_HOST'] = "localhost"
@@ -81,9 +97,6 @@ def login():
 def dashboard():
     return render_template('dashboard.html')  # Renderiza o dashboard
 
-import os  # Já incluído para operações com o sistema de arquivos
-
-import os  # Para operações com o sistema de arquivos
 
 @app.route('/addmodel', methods=['GET', 'POST'])
 @login_required
@@ -198,47 +211,51 @@ def view_model():
 @login_required
 def add_device():
     if request.method == 'POST' and request.is_json:
+        # Recebe os dados do formulário em formato JSON
         data = request.get_json()
         nome = data.get('nome')
         id_modelo = data.get('modelo')
         mac_address = data.get('mac_address')
         id_grupo = data.get('grupo')
         ip = data.get('ip')
-        access_type = data.get('access_type')  # Novo campo para tipo de acesso
+        access_type = data.get('access_type')
         username = data.get('username') if access_type == 'user_password' else None
         password = data.get('password')
 
         # Verifica se todos os campos obrigatórios estão preenchidos
         if not all([nome, mac_address, ip, password]) or (access_type == 'user_password' and not username):
-            return jsonify({"success": False, "message": "Todos os campos obrigatórios devem ser preenchidos."})
+            flash("Todos os campos obrigatórios devem ser preenchidos.", "danger")
+            return redirect(url_for('add_device'))
 
-        # Gera o hash da senha
-        password_hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+        # Criptografa a senha com `Fernet` antes de armazená-la
+        password_encrypted = encrypt_password(password)
 
         try:
             cursor = mysql.connection.cursor()
 
-            # Monta a consulta de inserção condicionalmente
+            # Insere o dispositivo com a senha criptografada
             if access_type == 'user_password':
                 cursor.execute("""
                     INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password) 
                     VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_hashed))
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_encrypted))
             else:
                 cursor.execute("""
                     INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, password) 
                     VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, password_hashed))
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, password_encrypted))
 
             mysql.connection.commit()
             cursor.close()
 
-            return jsonify({"success": True, "message": "Dispositivo adicionado com sucesso!"})
+            flash("Dispositivo adicionado com sucesso!", "success")
+            return redirect(url_for('view_devices'))
 
         except Exception as e:
-            return jsonify({"success": False, "message": f"Erro ao adicionar o dispositivo: {str(e)}"})
+            flash(f"Erro ao adicionar o dispositivo: {str(e)}", "danger")
+            return redirect(url_for('add_device'))
 
-    # Carrega os modelos e grupos para exibir no formulário
+    # Método GET para exibir o formulário de cadastro de dispositivo
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT id_modelo, nome FROM modelo")
     modelos = cursor.fetchall()
@@ -282,15 +299,10 @@ def view_devices():
     return render_template('viewdevice.html', dispositivos=dispositivos_data)
 
 
-
-from flask import jsonify, render_template, request
-import bcrypt
-
 @app.route('/alterdevices', methods=['GET', 'POST'])
-@login_required
 def alter_devices():
     if request.method == 'POST':
-        # Recebe dados do dispositivo a serem atualizados via AJAX
+        # Recebe os dados enviados via AJAX para atualizar um dispositivo
         data = request.get_json()
         id_dispositivo = data.get("id_dispositivo")
         nome = data.get("nome")
@@ -304,7 +316,7 @@ def alter_devices():
 
         try:
             cursor = mysql.connection.cursor()
-            
+
             # Se a senha foi enviada, cria um hash e atualiza a senha
             if password:
                 password_hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
@@ -316,71 +328,123 @@ def alter_devices():
                 """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_hashed, id_dispositivo))
             else:
                 # Atualiza sem alterar a senha
-                cursor.execute("""
+                cursor.execute(""" 
                     UPDATE dispositivos
                     SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s, 
                         access_type = %s, username = %s
                     WHERE id_dispositivo = %s
                 """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, id_dispositivo))
-            
+
             mysql.connection.commit()
             cursor.close()
-            
-            return jsonify({"success": True, "message": "Dispositivo atualizado com sucesso."})
+
+            return jsonify({"success": True, "message": "Dispositivo atualizado com sucesso."}), 200
         
         except Exception as e:
-            return jsonify({"success": False, "message": f"Erro ao atualizar dispositivo: {str(e)}"})
+            return jsonify({"success": False, "message": f"Erro ao atualizar dispositivo: {str(e)}"}), 500
 
     else:
-        # Caso GET: busca todos os dispositivos para exibição e edição
-        cursor = mysql.connection.cursor()
+        # Verifica se um ID específico foi solicitado para obter detalhes de um dispositivo
+        device_id = request.args.get('id_dispositivo')
         
-        cursor.execute("""
-            SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, 
-                   d.ip, d.access_type, d.username
-            FROM dispositivos d
-            JOIN modelo m ON d.id_modelo = m.id_modelo
-            JOIN grupo g ON d.id_grupo = g.id_grupo
-        """)
-        dispositivos = cursor.fetchall()
-        
-        cursor.execute("SELECT id_modelo AS id, nome FROM modelo")
-        modelos = cursor.fetchall()
-        
-        cursor.execute("SELECT id_grupo AS id, nome FROM grupo")
-        grupos = cursor.fetchall()
-        
-        cursor.close()
-        
-        dispositivos_data = [
-            {
-                "id_dispositivo": dispositivo[0],
-                "nome": dispositivo[1],
-                "modelo_nome": dispositivo[2],
-                "mac_address": dispositivo[3],
-                "grupo_nome": dispositivo[4],
-                "ip": dispositivo[5],
-                "access_type": dispositivo[6],
-                "username": dispositivo[7]
-            }
-            for dispositivo in dispositivos
-        ]
-        
-        modelos_data = [{"id": modelo[0], "nome": modelo[1]} for modelo in modelos]
-        grupos_data = [{"id": grupo[0], "nome": grupo[1]} for grupo in grupos]
+        if device_id:
+            cursor = mysql.connection.cursor()
+            cursor.execute("""
+                SELECT d.id_dispositivo, d.nome, m.id_modelo, m.nome AS modelo_nome, 
+                       d.mac_address, g.id_grupo, g.nome AS grupo_nome, d.ip, d.access_type, d.username
+                FROM dispositivos d
+                JOIN modelo m ON d.id_modelo = m.id_modelo
+                JOIN grupo g ON d.id_grupo = g.id_grupo
+                WHERE d.id_dispositivo = %s
+            """, (device_id,))
+            device = cursor.fetchone()
+            cursor.close()
 
-        return render_template('alterdevice.html', dispositivos=dispositivos_data, modelos=modelos_data, grupos=grupos_data)
+            if device:
+                device_data = {
+                    "id_dispositivo": device[0],
+                    "nome": device[1],
+                    "id_modelo": device[2],
+                    "modelo_nome": device[3],
+                    "mac_address": device[4],
+                    "id_grupo": device[5],
+                    "grupo_nome": device[6],
+                    "ip": device[7],
+                    "access_type": device[8],
+                    "username": device[9]
+                }
+                return jsonify(device_data)
+            else:
+                return jsonify({"message": "Dispositivo não encontrado"}), 404
+        else:
+            # Busca todos os dispositivos, modelos, e grupos para exibição na tabela
+            cursor = mysql.connection.cursor()
+            cursor.execute("""
+                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, 
+                       d.ip, d.access_type, d.username
+                FROM dispositivos d
+                JOIN modelo m ON d.id_modelo = m.id_modelo
+                JOIN grupo g ON d.id_grupo = g.id_grupo
+            """)
+            dispositivos = cursor.fetchall()
+
+            cursor.execute("SELECT id_modelo AS id, nome FROM modelo")
+            modelos = cursor.fetchall()
+            
+            cursor.execute("SELECT id_grupo AS id, nome FROM grupo")
+            grupos = cursor.fetchall()
+
+            cursor.close()
+
+            dispositivos_data = [
+                {
+                    "id_dispositivo": dispositivo[0],
+                    "nome": dispositivo[1],
+                    "modelo_nome": dispositivo[2],
+                    "mac_address": dispositivo[3],
+                    "grupo_nome": dispositivo[4],
+                    "ip": dispositivo[5],
+                    "access_type": dispositivo[6],
+                    "username": dispositivo[7]
+                }
+                for dispositivo in dispositivos
+            ]
+
+            modelos_data = [{"id": modelo[0], "nome": modelo[1]} for modelo in modelos]
+            grupos_data = [{"id": grupo[0], "nome": grupo[1]} for grupo in grupos]
+
+            return render_template('alterdevice.html', dispositivos=dispositivos_data, modelos=modelos_data, grupos=grupos_data)
 
 
 
-@app.route('/deletedevice')
+@app.route('/deletedevice', methods=['GET', 'POST'])
 @login_required
 def delete_devices():
-    cursor = mysql.connection.cursor()
+    # Se for uma requisição POST, o usuário deseja excluir um dispositivo
+    if request.method == 'POST':
+        id_dispositivo = request.json.get('id_dispositivo')  # Pegando o ID do dispositivo do JSON
+        print("ID do dispositivo recebido para exclusão:", id_dispositivo)  # Log do ID recebido
 
-    # Consulta para obter todos os dispositivos
+        if not id_dispositivo:
+            return jsonify({"success": False, "message": "ID do dispositivo não fornecido."}), 400
+
+        try:
+            cursor = mysql.connection.cursor()
+            cursor.execute("DELETE FROM dispositivos WHERE id_dispositivo = %s", (id_dispositivo,))
+            mysql.connection.commit()
+            cursor.close()
+            print("Dispositivo excluído com sucesso.")  # Log de sucesso
+            return jsonify({"success": True, "message": "Dispositivo excluído com sucesso."})
+        except Exception as e:
+            cursor.close()
+            print(f"Erro ao excluir dispositivo {id_dispositivo}: {str(e)}")  # Log de erro
+            return jsonify({"success": False, "message": f"Erro ao excluir dispositivo: {str(e)}"}), 500
+
+    # Se for uma requisição GET, o usuário deseja visualizar a lista de dispositivos
+    cursor = mysql.connection.cursor()
     cursor.execute("""
-        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip
+        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip, 
+               d.access_type, d.username, d.password
         FROM dispositivos d
         JOIN modelo m ON d.id_modelo = m.id_modelo
         JOIN grupo g ON d.id_grupo = g.id_grupo
@@ -388,7 +452,7 @@ def delete_devices():
     dispositivos = cursor.fetchall()
     cursor.close()
 
-    # Converte os dados para uma estrutura de dicionário para facilitar o uso no template
+    # Formatando os dispositivos em uma estrutura de dicionário
     dispositivos = [
         {
             "id_dispositivo": dispositivo[0],
@@ -396,26 +460,17 @@ def delete_devices():
             "modelo_nome": dispositivo[2],
             "mac_address": dispositivo[3],
             "grupo_nome": dispositivo[4],
-            "ip": dispositivo[5]
+            "ip": dispositivo[5],
+            "access_type": dispositivo[6],
+            "username": dispositivo[7],
+            "password": dispositivo[8]
         }
         for dispositivo in dispositivos
     ]
 
     return render_template('deletedevice.html', dispositivos=dispositivos)
 
-@app.route('/delete_device/<int:id_dispositivo>', methods=['POST'])
-@login_required
-def delete_device(id_dispositivo):
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute("DELETE FROM dispositivos WHERE id_dispositivo = %s", (id_dispositivo,))
-        mysql.connection.commit()
-        cursor.close()
-        return jsonify({"success": True, "message": "Dispositivo excluído com sucesso."})
-    except Exception as e:
-        # Exibe o erro no console para depuração
-        print(f"Erro ao excluir dispositivo {id_dispositivo}: {str(e)}")
-        return jsonify({"success": False, "message": f"Erro ao excluir dispositivo: {str(e)}"}), 500
+
 
 
 
