@@ -207,6 +207,7 @@ def view_model():
     return render_template('viewmodel.html', modelos=modelos)
 
 
+# Rota para adicionar um dispositivo
 @app.route('/adddevice', methods=['GET', 'POST'])
 @login_required
 def add_device():
@@ -224,8 +225,7 @@ def add_device():
 
         # Verifica se todos os campos obrigatórios estão preenchidos
         if not all([nome, mac_address, ip, password]) or (access_type == 'user_password' and not username):
-            flash("Todos os campos obrigatórios devem ser preenchidos.", "danger")
-            return redirect(url_for('add_device'))
+            return jsonify({"success": False, "message": "Todos os campos obrigatórios devem ser preenchidos."}), 400
 
         # Criptografa a senha com `Fernet` antes de armazená-la
         password_encrypted = encrypt_password(password)
@@ -248,12 +248,10 @@ def add_device():
             mysql.connection.commit()
             cursor.close()
 
-            flash("Dispositivo adicionado com sucesso!", "success")
-            return redirect(url_for('view_devices'))
+            return jsonify({"success": True, "message": "Dispositivo adicionado com sucesso!"}), 200
 
         except Exception as e:
-            flash(f"Erro ao adicionar o dispositivo: {str(e)}", "danger")
-            return redirect(url_for('add_device'))
+            return jsonify({"success": False, "message": f"Erro ao adicionar o dispositivo: {str(e)}"}), 500
 
     # Método GET para exibir o formulário de cadastro de dispositivo
     cursor = mysql.connection.cursor()

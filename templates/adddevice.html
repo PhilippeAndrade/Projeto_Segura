@@ -279,9 +279,10 @@
                             password: passwordField.value
                         }),
                         success: function(response) {
+                            resultMessage.innerHTML = `<span class="${response.success ? 'text-success' : 'text-danger'}">${response.message}</span>`;
+                            resultMessage.style.opacity = 1;
+
                             if (response.success) {
-                                resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
-                                resultMessage.style.opacity = 1;
                                 nomeField.value = "";
                                 macAddressField.value = "";
                                 ipField.value = "";
@@ -291,17 +292,17 @@
                                 usernameField.value = "";
                                 passwordField.value = "";
                                 usernameFieldContainer.style.display = "block";
-                                setTimeout(function() {
-                                    resultMessage.style.opacity = 0;
-                                }, 2000);
-                            } else {
-                                resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`;
-                                resultMessage.style.opacity = 1;
                             }
+                            setTimeout(function() {
+                                resultMessage.style.opacity = 0;
+                            }, 3000);
                         },
                         error: function() {
                             resultMessage.innerHTML = `<span class="text-danger">Erro ao processar o pedido. Tente novamente.</span>`;
                             resultMessage.style.opacity = 1;
+                            setTimeout(function() {
+                                resultMessage.style.opacity = 0;
+                            }, 3000);
                         }
                     });
                 }
