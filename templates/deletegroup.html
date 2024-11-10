@@ -8,16 +8,82 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        /* Estilos de layout da página */
-        body { display: flex; min-height: 100vh; background-color: #f8f9fa; }
-        .sidebar { width: 250px; background-color: #343a40; color: white; padding-top: 20px; }
-        .sidebar a { color: white; padding: 15px 20px; display: block; text-decoration: none; }
-        .sidebar a.active, .sidebar a:hover { background-color: #495057; color: #ffc107; }
-        .content { flex-grow: 1; padding: 30px; }
-        .form-container { max-width: 800px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px; }
-        .table-container { margin-top: 20px; overflow-x: auto; }
-        .btn-danger { background-color: #dc3545; }
-        .modal { display: none; position: fixed; z-index: 1; width: 100%; height: 100%; background-color: rgba(0, 0, 0, 0.4); }
+        /* Layout principal */
+        body { 
+            display: flex; 
+            min-height: 100vh; 
+            margin: 0;
+            background-color: #f8f9fa; 
+        }
+        
+        /* Barra lateral */
+        .sidebar { 
+            width: 250px; 
+            background-color: #343a40; 
+            color: white; 
+            display: flex; 
+            flex-direction: column; 
+            padding-top: 20px; 
+            position: fixed; 
+            height: 100vh;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a { 
+            color: white; 
+            padding: 15px 20px; 
+            font-size: 1.1rem; 
+            text-decoration: none; 
+            display: block;
+            transition: background 0.3s ease;
+        }
+        .sidebar a:hover, .sidebar a.active { 
+            background-color: #495057; 
+            color: #ffc107; 
+        }
+        
+        /* Conteúdo principal */
+        .content { 
+            flex-grow: 1; 
+            margin-left: 250px; 
+            padding: 30px;
+        }
+        
+        /* Container do formulário */
+        .form-container { 
+            max-width: 800px; 
+            margin: auto; 
+            background: #ffffff; 
+            padding: 30px; 
+            border-radius: 8px; 
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        }
+        
+        /* Container da tabela */
+        .table-container { 
+            margin-top: 20px; 
+            overflow-x: auto; 
+        }
+        
+        /* Botão de exclusão */
+        .btn-danger { 
+            background-color: #dc3545; 
+        }
+        
+        /* Modal */
+        .modal { 
+            display: none; 
+            position: fixed; 
+            z-index: 1; 
+            left: 0; 
+            top: 0; 
+            width: 100%; 
+            height: 100%; 
+            background-color: rgba(0, 0, 0, 0.4); 
+        }
         .modal-content {
             background-color: #fefefe;
             margin: 10% auto;
@@ -27,7 +93,11 @@
             max-width: 500px;
             border-radius: 8px;
         }
-        .close { float: right; font-size: 28px; cursor: pointer; }
+        .close { 
+            float: right; 
+            font-size: 28px; 
+            cursor: pointer; 
+        }
         
         /* Animação de fade-out */
         @keyframes fadeOut {
@@ -47,7 +117,6 @@
         <a href="/creategroup"><i class="fas fa-users"></i> Criar Grupo</a>
         <a href="/deletegroup" class="active"><i class="fas fa-times-circle"></i> Deletar Grupos</a>
         <a href="/managerdevices"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
-        <a href="/uploadscript"><i class="fas fa-upload"></i> Upload de Scripts</a>
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
@@ -125,14 +194,14 @@
                     if (response.success) {
                         setTimeout(() => {
                             $("#resultMessage").addClass("fade-out");
-                            setTimeout(() => location.reload(), 2000); // Recarrega após o fade-out
+                            setTimeout(() => location.reload(), 2000);
                         }, 2000);
                     } else {
                         setTimeout(() => $("#resultMessage").addClass("fade-out"), 2000);
                     }
                 },
                 error: function() {
-                    $("#resultMessage").html('<span class="text-danger">Erro ao excluir o grupo.Verifique se existe algum dispositivo associado e tente novamente.</span>').show();
+                    $("#resultMessage").html('<span class="text-danger">Erro ao excluir o grupo. Verifique se existe algum dispositivo associado e tente novamente.</span>').show();
                     closeModal();
                     setTimeout(() => $("#resultMessage").addClass("fade-out"), 2000);
                 }
