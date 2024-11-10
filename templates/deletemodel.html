@@ -91,6 +91,15 @@
             text-decoration: none;
             cursor: pointer;
         }
+
+        /* Animação de fade-out */
+        @keyframes fadeOut {
+            from { opacity: 1; }
+            to { opacity: 0; }
+        }
+        .fade-out {
+            animation: fadeOut 2s forwards;
+        }
     </style>
 </head>
 <body>
@@ -178,15 +187,41 @@
                     if (response.success) {
                         $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
                         closeModal();
-                        setTimeout(function() {
-                            location.reload();  // Recarrega a página para atualizar a lista de modelos
+                        $("#resultMessage").show();
+
+                        // Aplicar fade-out na mensagem após 2 segundos
+                        setTimeout(() => {
+                            $("#resultMessage").addClass("fade-out");
+                            setTimeout(() => {
+                                $("#resultMessage").removeClass("fade-out").hide();
+                            }, 2000);
                         }, 2000);
                     } else {
                         $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
+                        $("#resultMessage").show();
+                        closeModal();
+
+                        // Aplicar fade-out na mensagem após 2 segundos
+                        setTimeout(() => {
+                            $("#resultMessage").addClass("fade-out");
+                            setTimeout(() => {
+                                $("#resultMessage").removeClass("fade-out").hide();
+                            }, 2000);
+                        }, 2000);
                     }
                 },
                 error: function() {
-                    $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o modelo. Tente novamente.</span>`);
+                    $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o modelo. Verifique se existe algum dispositivo associado a este modelo e tente novamente.</span>`);
+                    $("#resultMessage").show();
+                    closeModal();
+
+                    // Aplicar fade-out na mensagem após 2 segundos
+                    setTimeout(() => {
+                        $("#resultMessage").addClass("fade-out");
+                        setTimeout(() => {
+                            $("#resultMessage").removeClass("fade-out").hide();
+                        }, 2000);
+                    }, 2000);
                 }
             });
         }

@@ -57,14 +57,6 @@
             margin-top: 20px;
             overflow-x: auto;
         }
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
     </style>
 </head>
 <body>
@@ -91,6 +83,8 @@
                             <th scope="col">MAC Address</th>
                             <th scope="col">Grupo</th>
                             <th scope="col">Endereço IP</th>
+                            <th scope="col">Tipo de Acesso</th>
+                            <th scope="col">Usuário</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -101,10 +95,12 @@
                             <td>{{ dispositivo.mac_address }}</td>
                             <td>{{ dispositivo.grupo_nome }}</td>
                             <td>{{ dispositivo.ip }}</td>
+                            <td>{{ dispositivo.access_type | replace('_', ' ') }}</td>
+                            <td>{% if dispositivo.username %}{{ dispositivo.username }}{% else %}-{% endif %}</td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="5" class="text-center">Nenhum dispositivo cadastrado.</td>
+                            <td colspan="7" class="text-center">Nenhum dispositivo cadastrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>

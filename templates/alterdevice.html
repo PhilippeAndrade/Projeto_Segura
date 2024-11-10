@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Alterar Dispositivos</title>
-    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
@@ -20,7 +19,6 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
-            transition: all 0.3s ease;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -31,7 +29,6 @@
             color: white;
             padding: 15px 20px;
             font-size: 1.1rem;
-            transition: background 0.3s ease;
             text-decoration: none;
         }
         .sidebar a:hover, .sidebar a.active {
@@ -46,10 +43,10 @@
             color: #343a40;
         }
         .form-container {
-            max-width: 800px;
+            max-width: 1000px;
             margin: auto;
             background: #ffffff;
-            padding: 30px;
+            padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
@@ -65,37 +62,6 @@
         .btn-warning:hover {
             background-color: #e0a800;
             border-color: #e0a800;
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 1;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 20px;
-            border: 1px solid #888;
-            width: 80%;
-            max-width: 500px;
-            border-radius: 8px;
-        }
-        .close {
-            color: #aaa;
-            float: right;
-            font-size: 28px;
-            font-weight: bold;
-        }
-        .close:hover,
-        .close:focus {
-            color: black;
-            text-decoration: none;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -115,15 +81,17 @@
         <div class="form-container">
             <h2 class="text-center mb-4">Alterar Dispositivos Cadastrados</h2>
             <div class="table-container">
-                <table class="table table-striped table-bordered">
+                <table class="table table-striped table-bordered table-responsive">
                     <thead class="thead-dark">
                         <tr>
-                            <th scope="col">Nome do Dispositivo</th>
-                            <th scope="col">Modelo</th>
-                            <th scope="col">MAC Address</th>
-                            <th scope="col">Grupo</th>
-                            <th scope="col">Endereço IP</th>
-                            <th scope="col">Ações</th>
+                            <th>Nome do Dispositivo</th>
+                            <th>Modelo</th>
+                            <th>MAC Address</th>
+                            <th>Grupo</th>
+                            <th>Endereço IP</th>
+                            <th>Tipo de Acesso</th>
+                            <th>Usuário</th>
+                            <th>Ações</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -134,13 +102,15 @@
                             <td>{{ dispositivo.mac_address }}</td>
                             <td>{{ dispositivo.grupo_nome }}</td>
                             <td>{{ dispositivo.ip }}</td>
+                            <td>{{ dispositivo.access_type | replace('_', ' ') }}</td>
+                            <td>{% if dispositivo.username %}{{ dispositivo.username }}{% else %}-{% endif %}</td>
                             <td>
-                                <button class="btn btn-warning btn-sm" onclick="openModal('{{ dispositivo.id_dispositivo }}')">Alterar</button>
+                                <button class="btn btn-warning btn-sm" onclick="openModal({{ dispositivo.id_dispositivo }})">Alterar</button>
                             </td>
                         </tr>
                         {% else %}
                         <tr>
-                            <td colspan="6" class="text-center">Nenhum dispositivo cadastrado.</td>
+                            <td colspan="8" class="text-center">Nenhum dispositivo cadastrado.</td>
                         </tr>
                         {% endfor %}
                     </tbody>
@@ -151,82 +121,126 @@
     </div>
 
     <!-- Modal Pop-up para Edição -->
-    <div id="editModal" class="modal">
-        <div class="modal-content">
-            <span class="close" onclick="closeModal()">&times;</span>
-            <h4 class="mb-3">Alterar Dispositivo</h4>
-            <form id="editForm">
-                <input type="hidden" id="editId">
-                <div class="form-group">
-                    <label for="editNome">Nome do Dispositivo</label>
-                    <input type="text" id="editNome" class="form-control">
+    <div class="modal fade" id="editModal" tabindex="-1" aria-labelledby="editModalLabel" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editModalLabel">Alterar Dispositivo</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
                 </div>
-                <div class="form-group">
-                    <label for="editModelo">Modelo</label>
-                    <select id="editModelo" class="form-control">
-                        {% for modelo in modelos %}
-                            <option value="{{ modelo.id }}">{{ modelo.nome }}</option>
-                        {% endfor %}
-                    </select>
+                <div class="modal-body">
+                    <form id="editForm">
+                        <input type="hidden" id="editId">
+                        <div class="form-group">
+                            <label for="editNome">Nome</label>
+                            <input type="text" class="form-control" id="editNome" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editModelo">Modelo</label>
+                            <select class="form-control" id="editModelo" required>
+                                {% for modelo in modelos %}
+                                <option value="{{ modelo.id }}">{{ modelo.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editMacAddress">MAC Address</label>
+                            <input type="text" class="form-control" id="editMacAddress" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editGrupo">Grupo</label>
+                            <select class="form-control" id="editGrupo" required>
+                                {% for grupo in grupos %}
+                                <option value="{{ grupo.id }}">{{ grupo.nome }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="editIp">Endereço IP</label>
+                            <input type="text" class="form-control" id="editIp" required>
+                        </div>
+                        <div class="form-group">
+                            <label for="editAccessType">Tipo de Acesso</label>
+                            <select class="form-control" id="editAccessType" required>
+                                <option value="password_only">Apenas Senha</option>
+                                <option value="username_password">Usuário e Senha</option>
+                            </select>
+                        </div>
+                        <div class="form-group" id="editUsernameContainer">
+                            <label for="editUsername">Usuário</label>
+                            <input type="text" class="form-control" id="editUsername">
+                        </div>
+                        <div class="form-group">
+                            <label for="editPassword">Senha</label>
+                            <input type="password" class="form-control" id="editPassword">
+                        </div>
+                        <button type="button" class="btn btn-primary" onclick="saveChanges()">Salvar Alterações</button>
+                    </form>
                 </div>
-                <div class="form-group">
-                    <label for="editMacAddress">MAC Address</label>
-                    <input type="text" id="editMacAddress" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="editGrupo">Grupo</label>
-                    <select id="editGrupo" class="form-control">
-                        {% for grupo in grupos %}
-                            <option value="{{ grupo.id }}">{{ grupo.nome }}</option>
-                        {% endfor %}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label for="editIp">Endereço IP</label>
-                    <input type="text" id="editIp" class="form-control">
-                </div>
-                <button type="button" class="btn btn-warning" onclick="saveChanges()">Salvar Alterações</button>
-            </form>
+            </div>
         </div>
     </div>
 
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.3/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    
     <script>
-        function openModal(id_dispositivo) {
-            $.getJSON(`/get_device/${id_dispositivo}`, function(data) {
-                $("#editId").val(data.id_dispositivo);
-                $("#editNome").val(data.nome);
-                $("#editModelo").val(data.id_modelo);
-                $("#editMacAddress").val(data.mac_address);
-                $("#editGrupo").val(data.id_grupo);
-                $("#editIp").val(data.ip);
-            });
-            document.getElementById("editModal").style.display = "block";
-        }
+        function openModal(id) {
+            $.ajax({
+                url: '/alterdevices',
+                type: 'GET',
+                data: {id_dispositivo: id},
+                success: function(data) {
+                    if (data) {
+                        // Preenche os campos com os dados
+                        $("#editId").val(data.id_dispositivo);
+                        $("#editNome").val(data.nome);
+                        $("#editModelo").val(data.id_modelo);
+                        $("#editMacAddress").val(data.mac_address);
+                        $("#editGrupo").val(data.id_grupo);
+                        $("#editIp").val(data.ip);
+                        $("#editAccessType").val(data.access_type);
+                        $("#editUsername").val(data.username || ""); // Se não houver username, deixa vazio
+                        $("#editPassword").val(""); // Deixa o campo de senha em branco
 
-        function closeModal() {
-            document.getElementById("editModal").style.display = "none";
+                        // Exibe o modal
+                        $("#editModal").modal("show");
+                    } else {
+                        alert("Erro ao carregar dados do dispositivo.");
+                    }
+                },
+                error: function() {
+                    alert("Erro ao buscar dados do dispositivo.");
+                }
+            });
         }
 
         function saveChanges() {
-            const id_dispositivo = $("#editId").val();
             const data = {
+                id_dispositivo: $("#editId").val(),
                 nome: $("#editNome").val(),
                 id_modelo: $("#editModelo").val(),
                 mac_address: $("#editMacAddress").val(),
                 id_grupo: $("#editGrupo").val(),
-                ip: $("#editIp").val()
+                ip: $("#editIp").val(),
+                access_type: $("#editAccessType").val(),
+                username: $("#editUsername").val(),
+                password: $("#editPassword").val()
             };
             
             $.ajax({
-                url: `/update_device/${id_dispositivo}`,
-                type: "POST",
-                contentType: "application/json",
+                url: '/alterdevices',
+                type: 'POST',
+                contentType: 'application/json',
                 data: JSON.stringify(data),
                 success: function(response) {
                     if (response.success) {
                         $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
-                        closeModal();
+                        $("#editModal").modal("hide");
                         setTimeout(function() {
                             location.reload();
                         }, 2000);
@@ -238,12 +252,6 @@
                     $("#resultMessage").html(`<span class="text-danger">Erro ao salvar as alterações. Tente novamente.</span>`);
                 }
             });
-        }
-
-        window.onclick = function(event) {
-            if (event.target == document.getElementById("editModal")) {
-                closeModal();
-            }
         }
     </script>
 </body>

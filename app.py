@@ -200,26 +200,43 @@ def add_device():
     if request.method == 'POST' and request.is_json:
         data = request.get_json()
         nome = data.get('nome')
-        id_modelo = data.get('id_modelo')
+        id_modelo = data.get('modelo')
         mac_address = data.get('mac_address')
-        id_grupo = data.get('id_grupo')
+        id_grupo = data.get('grupo')
         ip = data.get('ip')
+        access_type = data.get('access_type')  # Novo campo para tipo de acesso
+        username = data.get('username') if access_type == 'user_password' else None
+        password = data.get('password')
 
-        if nome and mac_address and ip:
-            try:
-                cursor = mysql.connection.cursor()
+        # Verifica se todos os campos obrigatórios estão preenchidos
+        if not all([nome, mac_address, ip, password]) or (access_type == 'user_password' and not username):
+            return jsonify({"success": False, "message": "Todos os campos obrigatórios devem ser preenchidos."})
+
+        # Gera o hash da senha
+        password_hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+
+        try:
+            cursor = mysql.connection.cursor()
+
+            # Monta a consulta de inserção condicionalmente
+            if access_type == 'user_password':
                 cursor.execute("""
-                    INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip) 
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (nome, id_modelo, mac_address, id_grupo, ip))
-                mysql.connection.commit()
-                cursor.close()
+                    INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_hashed))
+            else:
+                cursor.execute("""
+                    INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, password) 
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, password_hashed))
 
-                return jsonify({"success": True, "message": "Dispositivo adicionado com sucesso!"})
-            except Exception as e:
-                return jsonify({"success": False, "message": f"Erro ao adicionar o dispositivo: {str(e)}"})
-        else:
-            return jsonify({"success": False, "message": "Os campos Nome, MAC Address e IP são obrigatórios."})
+            mysql.connection.commit()
+            cursor.close()
+
+            return jsonify({"success": True, "message": "Dispositivo adicionado com sucesso!"})
+
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Erro ao adicionar o dispositivo: {str(e)}"})
 
     # Carrega os modelos e grupos para exibir no formulário
     cursor = mysql.connection.cursor()
@@ -236,8 +253,11 @@ def add_device():
 @login_required
 def view_devices():
     cursor = mysql.connection.cursor()
+    
+    # Seleciona todos os campos relevantes, incluindo `access_type` e `username`
     cursor.execute("""
-        SELECT d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip
+        SELECT d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip, 
+               d.access_type, d.username
         FROM dispositivos d
         JOIN modelo m ON d.id_modelo = m.id_modelo
         JOIN grupo g ON d.id_grupo = g.id_grupo
@@ -246,103 +266,111 @@ def view_devices():
     cursor.close()
     
     # Cada dispositivo será um dicionário para fácil acesso aos dados no template
-    dispositivos = [
+    dispositivos_data = [
         {
             "nome": dispositivo[0],
             "modelo_nome": dispositivo[1],
             "mac_address": dispositivo[2],
             "grupo_nome": dispositivo[3],
-            "ip": dispositivo[4]
+            "ip": dispositivo[4],
+            "access_type": dispositivo[5],
+            "username": dispositivo[6] if dispositivo[5] == "user_password" else None
         }
         for dispositivo in dispositivos
     ]
     
-    return render_template('viewdevice.html', dispositivos=dispositivos)
-
-@app.route('/get_device/<int:id_dispositivo>')
-@login_required
-def get_device(id_dispositivo):
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT * FROM dispositivos WHERE id_dispositivo = %s", (id_dispositivo,))
-    dispositivo = cursor.fetchone()
-    cursor.close()
-    if dispositivo:
-        return jsonify({
-            "id_dispositivo": dispositivo[0],
-            "nome": dispositivo[1],
-            "id_modelo": dispositivo[2],
-            "mac_address": dispositivo[3],
-            "id_grupo": dispositivo[4],
-            "ip": dispositivo[5]
-        })
-    return jsonify({"success": False, "message": "Dispositivo não encontrado."})
+    return render_template('viewdevice.html', dispositivos=dispositivos_data)
 
 
 
-@app.route('/update_device/<int:id_dispositivo>', methods=['POST'])
-@login_required
-def update_device(id_dispositivo):
-    data = request.get_json()
-    nome = data.get("nome")
-    id_modelo = data.get("id_modelo")
-    mac_address = data.get("mac_address")
-    id_grupo = data.get("id_grupo")
-    ip = data.get("ip")
+from flask import jsonify, render_template, request
+import bcrypt
 
-    try:
-        cursor = mysql.connection.cursor()
-        cursor.execute("""
-            UPDATE dispositivos
-            SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s
-            WHERE id_dispositivo = %s
-        """, (nome, id_modelo, mac_address, id_grupo, ip, id_dispositivo))
-        mysql.connection.commit()
-        cursor.close()
-        return jsonify({"success": True, "message": "Dispositivo atualizado com sucesso."})
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Erro ao atualizar dispositivo: {str(e)}"})
-
-
-
-@app.route('/alterdevices')
+@app.route('/alterdevices', methods=['GET', 'POST'])
 @login_required
 def alter_devices():
-    cursor = mysql.connection.cursor()
-    
-    # Atualiza a consulta SQL para usar id_dispositivo
-    cursor.execute("""
-        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, d.ip
-        FROM dispositivos d
-        JOIN modelo m ON d.id_modelo = m.id_modelo
-        JOIN grupo g ON d.id_grupo = g.id_grupo
-    """)
-    dispositivos = cursor.fetchall()
-    
-    cursor.execute("SELECT id_modelo AS id, nome FROM modelo")
-    modelos = cursor.fetchall()
-    
-    cursor.execute("SELECT id_grupo AS id, nome FROM grupo")
-    grupos = cursor.fetchall()
-    
-    cursor.close()
-    
-    # Converte os dados para uma estrutura de dicionário para facilitar o uso no template
-    dispositivos = [
-        {
-            "id_dispositivo": dispositivo[0],  # Usando id_dispositivo como chave
-            "nome": dispositivo[1],
-            "modelo_nome": dispositivo[2],
-            "mac_address": dispositivo[3],
-            "grupo_nome": dispositivo[4],
-            "ip": dispositivo[5]
-        }
-        for dispositivo in dispositivos
-    ]
-    
-    modelos = [{"id": modelo[0], "nome": modelo[1]} for modelo in modelos]
-    grupos = [{"id": grupo[0], "nome": grupo[1]} for grupo in grupos]
+    if request.method == 'POST':
+        # Recebe dados do dispositivo a serem atualizados via AJAX
+        data = request.get_json()
+        id_dispositivo = data.get("id_dispositivo")
+        nome = data.get("nome")
+        id_modelo = data.get("id_modelo")
+        mac_address = data.get("mac_address")
+        id_grupo = data.get("id_grupo")
+        ip = data.get("ip")
+        access_type = data.get("access_type")
+        username = data.get("username")
+        password = data.get("password")  # Senha opcional para atualização
 
-    return render_template('alterdevice.html', dispositivos=dispositivos, modelos=modelos, grupos=grupos)
+        try:
+            cursor = mysql.connection.cursor()
+            
+            # Se a senha foi enviada, cria um hash e atualiza a senha
+            if password:
+                password_hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                cursor.execute(""" 
+                    UPDATE dispositivos
+                    SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s, 
+                        access_type = %s, username = %s, password = %s
+                    WHERE id_dispositivo = %s
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_hashed, id_dispositivo))
+            else:
+                # Atualiza sem alterar a senha
+                cursor.execute("""
+                    UPDATE dispositivos
+                    SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s, 
+                        access_type = %s, username = %s
+                    WHERE id_dispositivo = %s
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, id_dispositivo))
+            
+            mysql.connection.commit()
+            cursor.close()
+            
+            return jsonify({"success": True, "message": "Dispositivo atualizado com sucesso."})
+        
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Erro ao atualizar dispositivo: {str(e)}"})
+
+    else:
+        # Caso GET: busca todos os dispositivos para exibição e edição
+        cursor = mysql.connection.cursor()
+        
+        cursor.execute("""
+            SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, d.mac_address, g.nome AS grupo_nome, 
+                   d.ip, d.access_type, d.username
+            FROM dispositivos d
+            JOIN modelo m ON d.id_modelo = m.id_modelo
+            JOIN grupo g ON d.id_grupo = g.id_grupo
+        """)
+        dispositivos = cursor.fetchall()
+        
+        cursor.execute("SELECT id_modelo AS id, nome FROM modelo")
+        modelos = cursor.fetchall()
+        
+        cursor.execute("SELECT id_grupo AS id, nome FROM grupo")
+        grupos = cursor.fetchall()
+        
+        cursor.close()
+        
+        dispositivos_data = [
+            {
+                "id_dispositivo": dispositivo[0],
+                "nome": dispositivo[1],
+                "modelo_nome": dispositivo[2],
+                "mac_address": dispositivo[3],
+                "grupo_nome": dispositivo[4],
+                "ip": dispositivo[5],
+                "access_type": dispositivo[6],
+                "username": dispositivo[7]
+            }
+            for dispositivo in dispositivos
+        ]
+        
+        modelos_data = [{"id": modelo[0], "nome": modelo[1]} for modelo in modelos]
+        grupos_data = [{"id": grupo[0], "nome": grupo[1]} for grupo in grupos]
+
+        return render_template('alterdevice.html', dispositivos=dispositivos_data, modelos=modelos_data, grupos=grupos_data)
+
 
 
 @app.route('/deletedevice')

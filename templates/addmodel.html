@@ -12,32 +12,38 @@
             width: 250px;
             background-color: #343a40;
             color: white;
-            display: flex;
-            flex-direction: column;
-            padding-top: 20px;
+            display: flex; flex-direction: column; padding-top: 20px;
         }
         .sidebar h2 { font-size: 1.5rem; text-align: center; margin-bottom: 1rem; }
         .sidebar a {
-            color: white;
-            padding: 15px 20px;
-            font-size: 1.1rem;
-            transition: background 0.3s ease;
-            text-decoration: none;
+            color: white; padding: 15px 20px; font-size: 1.1rem;
+            transition: background 0.3s ease; text-decoration: none;
         }
         .sidebar a:hover, .sidebar a.active {
-            background-color: #495057;
-            color: #ffc107;
+            background-color: #495057; color: #ffc107;
         }
         .content { flex-grow: 1; padding: 30px; }
-        .form-container { max-width: 600px; margin: auto; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        .form-container { max-width: 600px; margin: auto; background: #ffffff; padding: 30px;
+                          border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
         .btn-primary { background-color: #007bff; border-color: #007bff; }
         .btn-primary:hover { background-color: #0056b3; border-color: #0056b3; }
-        .rule-list { font-size: 0.9rem; color: #555; margin-top: 5px; opacity: 0; transition: opacity 0.4s ease-in-out; }
+
+        /* Estilo para exibir e ocultar regras */
+        .rule-list {
+            font-size: 0.9rem; color: #555; margin-top: 5px; display: none;
+            transition: opacity 0.4s ease-in-out;
+        }
+        .rule-list.expand { display: block; opacity: 1; }
         .rule-item { display: flex; align-items: center; }
         .rule-item span { margin-left: 5px; }
-        .rule-item .valid { color: green; }
-        .rule-item .invalid { color: red; }
+        .rule-item .valid { color: green; display: inline; }
+        .rule-item .invalid { color: red; display: inline; }
+        
+        /* Mensagem de resultado */
         #resultMessage { margin-top: 15px; font-size: 0.9rem; opacity: 1; transition: opacity 2s ease; }
+
+        /* Garantir que campos de entrada estejam acima dos elementos */
+        #nome, #fabricante { position: relative; z-index: 2; }
     </style>
 </head>
 <body>
@@ -63,13 +69,13 @@
                     <input type="text" id="nome" class="form-control" placeholder="Nome do Modelo">
                     <div id="rules" class="rule-list">
                         <div class="rule-item" id="ruleLowercase">
-                            <i class="fas fa-times invalid"></i><span>Deve estar em minúsculas</span>
+                            <i class="fas fa-times invalid"></i><span>Deve estar em letras minúsculas</span>
                         </div>
                         <div class="rule-item" id="ruleNoSpaces">
                             <i class="fas fa-times invalid"></i><span>Não pode conter espaços</span>
                         </div>
                         <div class="rule-item" id="ruleUnderscore">
-                            <i class="fas fa-times invalid"></i><span>Deve usar apenas underline para separação</span>
+                            <i class="fas fa-times invalid"></i><span>Deve usar apenas underscore para separação</span>
                         </div>
                     </div>
                 </div>
@@ -100,36 +106,65 @@
 
             // Função para validar o campo "Nome do Modelo" de acordo com as regras especificadas
             function validateForm() {
-                const nome = nomeField.value.trim();
-                
-                const isLowercase = /^[a-z0-9_]+$/.test(nome);    // Deve estar em minúsculas e pode conter números e underscores
-                const noSpaces = !/\s/.test(nome);                // Não deve conter espaços
-                const onlyUnderscore = /^[a-z0-9_]+$/.test(nome); // Somente sublinhado para separação
+                const nome = nomeField.value.trim(); // Remove espaços ao redor
+
+                // Regra: Deve estar em letras minúsculas, sem maiúsculas
+                const isLowercase = /^[a-z0-9_]+$/.test(nome);
+
+                // Regra: Não pode conter espaços no início, meio ou fim
+                const noSpaces = nome.indexOf(" ") === -1;
+
+                // Regra: Apenas letras minúsculas, números e underscores são permitidos
+                const onlyUnderscore = /^[a-z0-9_]+$/.test(nome);
 
                 // Atualiza o estado de cada regra visualmente
                 updateRule(ruleLowercase, isLowercase);
                 updateRule(ruleNoSpaces, noSpaces);
                 updateRule(ruleUnderscore, onlyUnderscore);
 
-                // Exibe as regras caso alguma esteja inválida
-                rules.style.opacity = !(isLowercase && noSpaces && onlyUnderscore) ? 1 : 0;
+                // Exibe as regras se alguma regra não for atendida
+                if (!(isLowercase && noSpaces && onlyUnderscore)) {
+                    rules.classList.add("expand");
+                }
+
+                // Retorna true se todas as regras forem atendidas; caso contrário, false
                 return isLowercase && noSpaces && onlyUnderscore;
             }
 
-            // Função auxiliar para atualizar o estado visual das regras de validação
-            function updateRule(element, condition) {
+            // Função auxiliar para mostrar ícones de sucesso ou erro para cada regra individualmente
+            function updateRule(element, isValid) {
                 const icon = element.querySelector("i");
-                if (condition) {
+                if (isValid) {
                     icon.classList.remove("fa-times", "invalid");
                     icon.classList.add("fa-check", "valid");
+                    icon.style.color = "green";  // Exibe o ícone verde
+                    element.style.display = "flex";
                 } else {
                     icon.classList.remove("fa-check", "valid");
                     icon.classList.add("fa-times", "invalid");
+                    icon.style.color = "red";  // Exibe o ícone vermelho
+                    element.style.display = "flex";
                 }
             }
 
-            // Ativa a validação ao digitar no campo de nome
-            nomeField.addEventListener("input", validateForm);
+            // Exibe as regras ao focar no campo "Nome do Modelo"
+            nomeField.addEventListener("focus", () => {
+                rules.classList.add("expand");
+            });
+
+            // Valida e oculta regras dinamicamente ao digitar
+            nomeField.addEventListener("input", () => {
+                if (validateForm()) {
+                    rules.classList.remove("expand");  // Oculta as regras se todas forem atendidas
+                }
+            });
+
+            // Oculta as regras ao perder o foco, se todas as regras estiverem atendidas
+            nomeField.addEventListener("blur", () => {
+                if (validateForm()) {
+                    rules.classList.remove("expand");
+                }
+            });
 
             // Submissão do formulário
             form.addEventListener("submit", function(event) {
@@ -140,7 +175,7 @@
                         type: "POST",
                         contentType: "application/json",
                         data: JSON.stringify({
-                            nome: nomeField.value,
+                            nome: nomeField.value.trim(), // Salva sem espaços ao redor
                             fabricante: fabricanteField.value
                         }),
                         success: function(response) {
@@ -149,7 +184,7 @@
                                 resultMessage.style.opacity = 1;
                                 nomeField.value = "";
                                 fabricanteField.value = "";
-                                rules.style.opacity = 0;
+                                rules.classList.remove("expand");
                             } else {
                                 resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`;
                                 resultMessage.style.opacity = 1;
@@ -163,8 +198,6 @@
                 }
             });
         });
-
-
     </script>
 </body>
 </html>
