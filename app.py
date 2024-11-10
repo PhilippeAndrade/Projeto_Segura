@@ -297,6 +297,7 @@ def view_devices():
     return render_template('viewdevice.html', dispositivos=dispositivos_data)
 
 
+# Rota para alterar dispositivos
 @app.route('/alterdevices', methods=['GET', 'POST'])
 def alter_devices():
     if request.method == 'POST':
@@ -315,17 +316,17 @@ def alter_devices():
         try:
             cursor = mysql.connection.cursor()
 
-            # Se a senha foi enviada, cria um hash e atualiza a senha
+            # Se a senha foi enviada, criptografa a senha e atualiza o dispositivo
             if password:
-                password_hashed = bcrypt.hashpw(password.encode(), bcrypt.gensalt()).decode()
+                password_encrypted = encrypt_password(password)
                 cursor.execute(""" 
                     UPDATE dispositivos
                     SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s, 
                         access_type = %s, username = %s, password = %s
                     WHERE id_dispositivo = %s
-                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_hashed, id_dispositivo))
+                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_encrypted, id_dispositivo))
             else:
-                # Atualiza sem alterar a senha
+                # Atualiza o dispositivo sem alterar a senha
                 cursor.execute(""" 
                     UPDATE dispositivos
                     SET nome = %s, id_modelo = %s, mac_address = %s, id_grupo = %s, ip = %s, 
@@ -349,7 +350,7 @@ def alter_devices():
             cursor = mysql.connection.cursor()
             cursor.execute("""
                 SELECT d.id_dispositivo, d.nome, m.id_modelo, m.nome AS modelo_nome, 
-                       d.mac_address, g.id_grupo, g.nome AS grupo_nome, d.ip, d.access_type, d.username
+                       d.mac_address, g.id_grupo, g.nome AS grupo_nome, d.ip, d.access_type, d.username, d.password
                 FROM dispositivos d
                 JOIN modelo m ON d.id_modelo = m.id_modelo
                 JOIN grupo g ON d.id_grupo = g.id_grupo
@@ -359,6 +360,7 @@ def alter_devices():
             cursor.close()
 
             if device:
+                # Descriptografa a senha para enviar ao frontend
                 device_data = {
                     "id_dispositivo": device[0],
                     "nome": device[1],
@@ -369,7 +371,8 @@ def alter_devices():
                     "grupo_nome": device[6],
                     "ip": device[7],
                     "access_type": device[8],
-                    "username": device[9]
+                    "username": device[9],
+                    "password": decrypt_password(device[10]) if device[10] else None
                 }
                 return jsonify(device_data)
             else:
