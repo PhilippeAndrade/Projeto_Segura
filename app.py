@@ -19,6 +19,7 @@ fernet_key = b'0Ry0Np_T-51ZtqPtzyX0hcrpfcTCa-a15baaZjuiwEk='
 cipher_suite = Fernet(fernet_key)
 
 
+
 # Função para criptografar a senha do dispositivo
 def encrypt_password(password):
     return cipher_suite.encrypt(password.encode())
@@ -37,10 +38,25 @@ app.config['MYSQL_DB'] = "segura"
 # Inicializa a conexão com o MySQL
 mysql = MySQL(app)
 
+
+def create_admin_user():
+    try:
+        cursor = mysql.connection.cursor()
+        cursor.execute("SELECT * FROM usuarios WHERE username = %s", ("admin",))
+        
+        # Se o usuário "admin" não existe, crie-o
+        if not cursor.fetchone():
+            admin_password = hash_senha("admin")
+            cursor.execute("INSERT INTO usuarios (username, password) VALUES (%s, %s)", ("admin", admin_password))
+            mysql.connection.commit()
+        cursor.close()
+    except Exception as e:
+        print(f"Erro ao tentar criar o usuário admin: {str(e)}")
+
 # Classe de formulário para criar um novo usuário
 class UserForm(FlaskForm):
     username = StringField('Nome de Usuário', validators=[DataRequired(), Length(min=4, max=25)])  # Campo de usuário com validações
-    password = PasswordField('Senha', validators=[DataRequired(), Length(min=6)])  # Campo de senha com validações
+    password = PasswordField('Senha', validators=[DataRequired(), Length(min=5)])  # Campo de senha com validações
     submit = SubmitField('Iniciar a Sessão')  # Botão de submissão do formulário
 
 # Decorador para verificar se o usuário está logado
@@ -212,39 +228,32 @@ def view_model():
 @login_required
 def add_device():
     if request.method == 'POST' and request.is_json:
-        # Recebe os dados do formulário em formato JSON
         data = request.get_json()
         nome = data.get('nome')
-        id_modelo = data.get('modelo')
+        id_modelo = data.get('id_modelo')
         mac_address = data.get('mac_address')
-        id_grupo = data.get('grupo')
+        id_grupo = data.get('id_grupo')
         ip = data.get('ip')
         access_type = data.get('access_type')
         username = data.get('username') if access_type == 'user_password' else None
         password = data.get('password')
 
-        # Verifica se todos os campos obrigatórios estão preenchidos
-        if not all([nome, mac_address, ip, password]) or (access_type == 'user_password' and not username):
-            return jsonify({"success": False, "message": "Todos os campos obrigatórios devem ser preenchidos."}), 400
+        # Verifica se campos obrigatórios estão preenchidos
+        if not all([nome, id_modelo, mac_address, id_grupo, ip, password]):
+            return jsonify({"success": False, "message": "Preencha todos os campos obrigatórios."}), 400
 
-        # Criptografa a senha com `Fernet` antes de armazená-la
+        # Criptografa a senha
         password_encrypted = encrypt_password(password)
 
         try:
             cursor = mysql.connection.cursor()
 
             # Insere o dispositivo com a senha criptografada
-            if access_type == 'user_password':
-                cursor.execute("""
-                    INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_encrypted))
-            else:
-                cursor.execute("""
-                    INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, password) 
-                    VALUES (%s, %s, %s, %s, %s, %s, %s)
-                """, (nome, id_modelo, mac_address, id_grupo, ip, access_type, password_encrypted))
-
+            query = """
+                INSERT INTO dispositivos (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """
+            cursor.execute(query, (nome, id_modelo, mac_address, id_grupo, ip, access_type, username, password_encrypted))
             mysql.connection.commit()
             cursor.close()
 
@@ -253,11 +262,9 @@ def add_device():
         except Exception as e:
             return jsonify({"success": False, "message": f"Erro ao adicionar o dispositivo: {str(e)}"}), 500
 
-    # Método GET para exibir o formulário de cadastro de dispositivo
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT id_modelo, nome FROM modelo")
     modelos = cursor.fetchall()
-
     cursor.execute("SELECT id_grupo, nome FROM grupo")
     grupos = cursor.fetchall()
     cursor.close()
@@ -721,30 +728,37 @@ def delete_group():
 @app.route('/managergroups', methods=['GET', 'POST'])
 def manager_groups():
     if request.method == 'POST':
-        # Filtragem de dispositivos por grupo usando AJAX
-        group_id = request.json.get('group_id')  # Recebe o `group_id` via JSON no corpo da requisição
-        
+        # Recebe `group_id` e `modelo_id` via JSON no corpo da requisição
+        group_id = request.json.get('group_id')
+        modelo_id = request.json.get('modelo_id')
+
         cursor = mysql.connection.cursor()
-        # Filtra os dispositivos pelo grupo especificado, ou retorna todos se `group_id` estiver vazio
+
+        # Define a consulta base
+        query = """
+            SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+            FROM dispositivos d
+            LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+            LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+            WHERE 1=1
+        """
+        params = []
+
+        # Filtra pelo grupo, se especificado
         if group_id:
-            cursor.execute("""
-                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
-                FROM dispositivos d
-                LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
-                LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
-                WHERE d.id_grupo = %s
-            """, (group_id,))
-        else:
-            cursor.execute("""
-                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
-                FROM dispositivos d
-                LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
-                LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
-            """)
-        
+            query += " AND d.id_grupo = %s"
+            params.append(group_id)
+
+        # Filtra pelo modelo, se especificado
+        if modelo_id:
+            query += " AND d.id_modelo = %s"
+            params.append(modelo_id)
+
+        # Executa a consulta com os parâmetros
+        cursor.execute(query, tuple(params))
         dispositivos = cursor.fetchall()
         cursor.close()
-        
+
         # Formata os dispositivos para o formato JSON
         dispositivos_list = [
             {
@@ -760,6 +774,31 @@ def manager_groups():
 
         # Retorna a lista de dispositivos filtrados como JSON
         return jsonify({"devices": dispositivos_list})
+
+    # Método GET para carregar a página de gerenciamento com todos os grupos, modelos e dispositivos
+    cursor = mysql.connection.cursor()
+
+    # Carregar todos os grupos
+    cursor.execute("SELECT id_grupo, nome FROM grupo")
+    grupos = cursor.fetchall()
+
+    # Carregar todos os modelos
+    cursor.execute("SELECT id_modelo, nome FROM modelo")
+    modelos = cursor.fetchall()
+
+    # Carregar todos os dispositivos
+    cursor.execute("""
+        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+        FROM dispositivos d
+        LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+        LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+    """)
+    dispositivos = cursor.fetchall()
+    cursor.close()
+
+    # Renderiza o template com todos os dispositivos, grupos e modelos para o carregamento inicial
+    return render_template('managergroups.html', dispositivos=dispositivos, grupos=grupos, modelos=modelos)
+
 
     # Método GET para carregar a página de gerenciamento de grupos com todos os grupos e dispositivos
     cursor = mysql.connection.cursor()
@@ -1002,4 +1041,6 @@ def page_not_found(e):
 
 # Executa o servidor se o script for executado diretamente
 if __name__ == '__main__':
+    with app.app_context():
+        create_admin_user()
     app.run(debug=True, host='0.0.0.0', port=5000)

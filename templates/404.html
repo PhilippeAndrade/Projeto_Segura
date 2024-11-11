@@ -5,9 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>404 - Página Não Encontrada</title>
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
-    <!-- Link do Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        /* Estilos principais da página */
         body {
             display: flex;
             justify-content: center;
@@ -15,9 +15,11 @@
             height: 100vh;
             background-color: #C0C8CE;
             margin: 0;
-            text-align: center;
             color: #333;
+            text-align: center;
         }
+
+        /* Contêiner principal para centralizar o conteúdo */
         .container {
             max-width: 600px;
             padding: 20px;
@@ -25,40 +27,98 @@
             background-color: #ffffff;
             box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             animation: fadeIn 2s ease-in-out;
+            width: 100%;
+            margin: 0 15px;
         }
+
+        /* Estilo do título 404 */
         h1 {
             font-size: 3em;
             color: #ff6b6b;
             animation: bounce 1.5s infinite;
+            margin: 0;
         }
+
+        /* Estilo da mensagem de erro */
         p {
             font-size: 1.2em;
             color: #555;
-            margin-bottom: 20px;
+            margin: 20px 0;
         }
+
+        /* Estilo da imagem */
         img {
-            max-width: 100%; /* Ajuste para 100% para garantir que a imagem se ajuste ao contêiner */
+            max-width: 80%;
             height: auto;
             margin-bottom: 20px;
             animation: float 3s ease-in-out infinite;
         }
+
+        /* Estilo do botão de retorno */
         .btn-back {
             font-size: 1em;
             padding: 10px 20px;
+            transition: background-color 0.3s ease;
         }
+
+        .btn-back:hover {
+            background-color: #ff5252;
+        }
+
         /* Animações */
         @keyframes fadeIn {
             0% { opacity: 0; }
             100% { opacity: 1; }
         }
+
         @keyframes bounce {
             0%, 100% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
         }
+
         @keyframes float {
             0% { transform: translateY(0); }
             50% { transform: translateY(-10px); }
             100% { transform: translateY(0); }
+        }
+
+        /* Ajustes de responsividade */
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 2.5em;
+            }
+
+            p {
+                font-size: 1em;
+                margin: 15px 0;
+            }
+
+            .container {
+                padding: 15px;
+            }
+
+            .btn-back {
+                font-size: 0.9em;
+                padding: 8px 16px;
+            }
+        }
+
+        @media (max-width: 576px) {
+            h1 {
+                font-size: 2em;
+            }
+
+            img {
+                max-width: 70%;
+            }
+
+            .container {
+                padding: 10px;
+            }
+
+            p {
+                font-size: 0.9em;
+            }
         }
     </style>
 </head>
@@ -70,7 +130,7 @@
         <a href="/login" class="btn btn-primary btn-lg btn-back">Voltar para o Início</a>
     </div>
 
-    <!-- Link do Bootstrap JS e dependências (opcional) -->
+    <!-- Link do Bootstrap JS e dependências -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>

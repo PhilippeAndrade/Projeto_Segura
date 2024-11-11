@@ -12,7 +12,10 @@
             display: flex;
             min-height: 100vh;
             background-color: #f8f9fa;
+            margin: 0;
         }
+
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -20,6 +23,14 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta inicialmente */
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -37,9 +48,41 @@
             background-color: #495057;
             color: #ffc107;
         }
+
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+
+        /* Content */
         .content {
             flex-grow: 1;
             padding: 30px;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px;
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0;
+            }
         }
         .form-container {
             max-width: 800px;
@@ -87,6 +130,9 @@
     </style>
 </head>
 <body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
 
     <!-- Sidebar -->
     <div class="sidebar">
@@ -144,20 +190,26 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
         let userToDelete = null;
-    
+        
+        // Função de toggle da sidebar
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+        });
+
         function confirmDelete(id) {
             userToDelete = id;
             document.getElementById("deleteModal").style.display = "block";
         }
-    
+
         function closeModal() {
             document.getElementById("deleteModal").style.display = "none";
             userToDelete = null;
         }
-    
+
         function deleteUser() {
             if (!userToDelete) return;
-    
+
             $.ajax({
                 url: "/deletarusuarios",
                 type: "POST",
@@ -179,7 +231,7 @@
                 }
             });
         }
-    
+
         window.onclick = function(event) {
             if (event.target == document.getElementById("deleteModal")) {
                 closeModal();

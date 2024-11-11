@@ -2,17 +2,21 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Deletar Dispositivos</title>
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
+        /* Layout principal */
         body {
             display: flex;
             min-height: 100vh;
             background-color: #f8f9fa;
+            margin: 0;
         }
+
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -20,6 +24,14 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente em telas pequenas */
+            transition: left 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -32,15 +44,49 @@
             font-size: 1.1rem;
             text-decoration: none;
             transition: background 0.3s ease;
+            display: block;
         }
         .sidebar a:hover, .sidebar a.active {
             background-color: #495057;
             color: #ffc107;
         }
+
+        /* Botão de Toggle para Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        .sidebar.show + #sidebarToggle {
+            color: white; /* Torna o ícone branco quando a sidebar está visível */
+        }
+        
+        /* Conteúdo principal */
         .content {
             flex-grow: 1;
+            margin-left: 250px;
             padding: 30px;
+            transition: margin-left 0.3s ease;
+            width: 100%;
         }
+        .sidebar.show + .content {
+            margin-left: 250px;
+        }
+
+        /* Ajustes para telas pequenas */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+        }
+
+        /* Container do formulário */
         .form-container {
             max-width: 800px;
             margin: auto;
@@ -49,10 +95,14 @@
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
+
+        /* Tabela Responsiva */
         .table-container {
             margin-top: 20px;
             overflow-x: auto;
         }
+
+        /* Botão de exclusão */
         .btn-danger {
             background-color: #dc3545;
             border-color: #dc3545;
@@ -61,6 +111,8 @@
             background-color: #c82333;
             border-color: #bd2130;
         }
+
+        /* Modal Responsivo */
         .modal {
             display: none;
             position: fixed;
@@ -94,6 +146,9 @@
     </style>
 </head>
 <body>
+    <!-- Botão de Toggle para Sidebar -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
     <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
@@ -108,7 +163,7 @@
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
-    <!-- Content -->
+    <!-- Conteúdo principal -->
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Deletar Dispositivos Cadastrados</h2>
@@ -156,7 +211,7 @@
         </div>
     </div>
 
-    <!-- Modal Pop-up de Confirmação de Exclusão -->
+    <!-- Modal de Confirmação de Exclusão -->
     <div id="deleteModal" class="modal">
         <div class="modal-content">
             <span class="close" onclick="closeModal()">&times;</span>
@@ -172,43 +227,39 @@
         let deviceToDelete = null;
 
         function confirmDelete(id_dispositivo) {
-            deviceToDelete = id_dispositivo;  // Armazena o ID do dispositivo a ser excluído
+            deviceToDelete = id_dispositivo;
             document.getElementById("deleteModal").style.display = "block";
         }
 
         function closeModal() {
             document.getElementById("deleteModal").style.display = "none";
-            deviceToDelete = null;  // Reseta o ID do dispositivo a ser excluído
+            deviceToDelete = null;
         }
 
         function deleteDevice() {
-    if (!deviceToDelete) return;
+            if (!deviceToDelete) return;
 
-    console.log("Tentando excluir dispositivo com ID:", deviceToDelete); // Log para verificar ID do dispositivo
-
-    $.ajax({
-        url: `/deletedevice`,
-        type: "POST",
-        contentType: "application/json",
-        data: JSON.stringify({ id_dispositivo: deviceToDelete }),
-        success: function(response) {
-            console.log("Resposta do servidor:", response); // Log para verificar resposta do servidor
-            if (response.success) {
-                $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
-                closeModal();
-                setTimeout(function() {
-                    location.reload();
-                }, 2000);
-            } else {
-                $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
-            }
-        },
-        error: function() {
-            $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o dispositivo. Tente novamente.</span>`);
-            console.error("Erro na requisição AJAX para exclusão"); // Log de erro
+            $.ajax({
+                url: `/deletedevice`,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ id_dispositivo: deviceToDelete }),
+                success: function(response) {
+                    if (response.success) {
+                        $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
+                        closeModal();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
+                    }
+                },
+                error: function() {
+                    $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o dispositivo. Tente novamente.</span>`);
+                }
+            });
         }
-    });
-}
 
         // Fecha o modal ao clicar fora dele
         window.onclick = function(event) {
@@ -216,6 +267,12 @@
                 closeModal();
             }
         }
+
+        // Sidebar Toggle para Mobile e Desktop
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40'); // Altera a cor do ícone
+        });
     </script>
 </body>
 </html>

@@ -26,6 +26,12 @@
             padding-top: 20px; 
             position: fixed; 
             height: 100vh;
+            transition: 0.3s;
+            left: -250px; /* Oculta a sidebar inicialmente */
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0;
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -45,11 +51,34 @@
             color: #ffc107; 
         }
         
+        /* Toggle da Sidebar para dispositivos móveis */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone para branco quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+
         /* Conteúdo principal */
         .content { 
             flex-grow: 1; 
             margin-left: 250px; 
             padding: 30px;
+            transition: margin-left 0.3s;
+        }
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
         }
         
         /* Container do formulário */
@@ -67,13 +96,8 @@
             margin-top: 20px; 
             overflow-x: auto; 
         }
-        
-        /* Botão de exclusão */
-        .btn-danger { 
-            background-color: #dc3545; 
-        }
-        
-        /* Modal */
+
+        /* Modal Responsivo */
         .modal { 
             display: none; 
             position: fixed; 
@@ -98,7 +122,12 @@
             font-size: 28px; 
             cursor: pointer; 
         }
-        
+
+        /* Botão de exclusão */
+        .btn-danger { 
+            background-color: #dc3545; 
+        }
+
         /* Animação de fade-out */
         @keyframes fadeOut {
             from { opacity: 1; }
@@ -110,6 +139,9 @@
     </style>
 </head>
 <body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
 
     <!-- Barra lateral -->
     <div class="sidebar">
@@ -218,6 +250,12 @@
                 closeModal();
             }
         }
+
+        // Sidebar Toggle para Mobile
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40'); // Altera a cor do ícone
+        });
     </script>
 </body>
 </html>

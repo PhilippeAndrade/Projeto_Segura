@@ -7,12 +7,23 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body { display: flex; min-height: 100vh; background-color: #f8f9fa; }
+        body { display: flex; min-height: 100vh; background-color: #f8f9fa; margin: 0; }
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #343a40;
             color: white;
-            display: flex; flex-direction: column; padding-top: 20px;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente */
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0; /* Sidebar visível */
         }
         .sidebar h2 { font-size: 1.5rem; text-align: center; margin-bottom: 1rem; }
         .sidebar a {
@@ -22,9 +33,47 @@
         .sidebar a:hover, .sidebar a.active {
             background-color: #495057; color: #ffc107;
         }
-        .content { flex-grow: 1; padding: 30px; }
-        .form-container { max-width: 600px; margin: auto; background: #ffffff; padding: 30px;
-                          border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); }
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+        /* Conteúdo */
+        .content { 
+            flex-grow: 1; 
+            padding: 30px; 
+            margin-left: 250px; /* Deixa espaço para a sidebar */
+            transition: margin-left 0.3s ease;
+        }
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px; /* Sidebar oculta em telas pequenas */
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0; /* Sidebar visível em telas pequenas */
+            }
+        }
+        /* Estilo do formulário */
+        .form-container { 
+            max-width: 600px; margin: auto; background: #ffffff; padding: 30px;
+            border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        }
         .btn-primary { background-color: #007bff; border-color: #007bff; }
         .btn-primary:hover { background-color: #0056b3; border-color: #0056b3; }
 
@@ -47,6 +96,9 @@
     </style>
 </head>
 <body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
 
     <!-- Sidebar -->
     <div class="sidebar">
@@ -94,6 +146,12 @@
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function() {
+            // Função de Toggle da Sidebar
+            $('#sidebarToggle').click(function() {
+                $('.sidebar').toggleClass('show');
+                $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+            });
+
             const nomeField = document.getElementById("nome");
             const fabricanteField = document.getElementById("fabricante");
             const resultMessage = document.getElementById("resultMessage");
@@ -104,69 +162,40 @@
             const ruleUnderscore = document.getElementById("ruleUnderscore");
             const rules = document.getElementById("rules");
 
-            // Função para validar o campo "Nome do Modelo" de acordo com as regras especificadas
             function validateForm() {
                 const nome = nomeField.value.trim(); // Remove espaços ao redor
-
-                // Regra: Deve estar em letras minúsculas, sem maiúsculas
                 const isLowercase = /^[a-z0-9_]+$/.test(nome);
-
-                // Regra: Não pode conter espaços no início, meio ou fim
                 const noSpaces = nome.indexOf(" ") === -1;
-
-                // Regra: Apenas letras minúsculas, números e underscores são permitidos
                 const onlyUnderscore = /^[a-z0-9_]+$/.test(nome);
-
-                // Atualiza o estado de cada regra visualmente
                 updateRule(ruleLowercase, isLowercase);
                 updateRule(ruleNoSpaces, noSpaces);
                 updateRule(ruleUnderscore, onlyUnderscore);
 
-                // Exibe as regras se alguma regra não for atendida
                 if (!(isLowercase && noSpaces && onlyUnderscore)) {
                     rules.classList.add("expand");
                 }
-
-                // Retorna true se todas as regras forem atendidas; caso contrário, false
                 return isLowercase && noSpaces && onlyUnderscore;
             }
 
-            // Função auxiliar para mostrar ícones de sucesso ou erro para cada regra individualmente
             function updateRule(element, isValid) {
                 const icon = element.querySelector("i");
                 if (isValid) {
                     icon.classList.remove("fa-times", "invalid");
                     icon.classList.add("fa-check", "valid");
-                    icon.style.color = "green";  // Exibe o ícone verde
+                    icon.style.color = "green";
                     element.style.display = "flex";
                 } else {
                     icon.classList.remove("fa-check", "valid");
                     icon.classList.add("fa-times", "invalid");
-                    icon.style.color = "red";  // Exibe o ícone vermelho
+                    icon.style.color = "red";
                     element.style.display = "flex";
                 }
             }
 
-            // Exibe as regras ao focar no campo "Nome do Modelo"
-            nomeField.addEventListener("focus", () => {
-                rules.classList.add("expand");
-            });
+            nomeField.addEventListener("focus", () => { rules.classList.add("expand"); });
+            nomeField.addEventListener("input", () => { if (validateForm()) rules.classList.remove("expand"); });
+            nomeField.addEventListener("blur", () => { if (validateForm()) rules.classList.remove("expand"); });
 
-            // Valida e oculta regras dinamicamente ao digitar
-            nomeField.addEventListener("input", () => {
-                if (validateForm()) {
-                    rules.classList.remove("expand");  // Oculta as regras se todas forem atendidas
-                }
-            });
-
-            // Oculta as regras ao perder o foco, se todas as regras estiverem atendidas
-            nomeField.addEventListener("blur", () => {
-                if (validateForm()) {
-                    rules.classList.remove("expand");
-                }
-            });
-
-            // Submissão do formulário
             form.addEventListener("submit", function(event) {
                 event.preventDefault();
                 if (validateForm()) {
@@ -175,20 +204,15 @@
                         type: "POST",
                         contentType: "application/json",
                         data: JSON.stringify({
-                            nome: nomeField.value.trim(), // Salva sem espaços ao redor
+                            nome: nomeField.value.trim(),
                             fabricante: fabricanteField.value
                         }),
                         success: function(response) {
-                            if (response.success) {
-                                resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
-                                resultMessage.style.opacity = 1;
-                                nomeField.value = "";
-                                fabricanteField.value = "";
-                                rules.classList.remove("expand");
-                            } else {
-                                resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`;
-                                resultMessage.style.opacity = 1;
-                            }
+                            resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
+                            resultMessage.style.opacity = 1;
+                            nomeField.value = "";
+                            fabricanteField.value = "";
+                            rules.classList.remove("expand");
                         },
                         error: function() {
                             resultMessage.innerHTML = `<span class="text-danger">Erro ao processar o pedido. Tente novamente.</span>`;

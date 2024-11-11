@@ -12,7 +12,9 @@
             display: flex;
             min-height: 100vh;
             background-color: #f8f9fa;
+            margin: 0;
         }
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -20,7 +22,14 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente */
             transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0; /* Sidebar visível */
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -38,13 +47,46 @@
             background-color: #495057;
             color: #ffc107;
         }
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+        /* Conteúdo */
         .content {
             flex-grow: 1;
             padding: 30px;
+            margin-left: 250px; /* Deixa espaço para a sidebar */
+            transition: margin-left 0.3s ease;
             display: flex;
             justify-content: center;
             align-items: flex-start;
         }
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px; /* Sidebar oculta em telas pequenas */
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0; /* Sidebar visível em telas pequenas */
+            }
+        }
+        /* Estilo do formulário */
         .form-container {
             max-width: 800px;
             width: 100%;
@@ -57,6 +99,9 @@
     </style>
 </head>
 <body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
 
     <!-- Sidebar -->
     <div class="sidebar">
@@ -76,6 +121,11 @@
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Lista de Dispositivos</h2>
+
+            <!-- Campo de pesquisa -->
+            <div class="form-group">
+                <input type="text" id="searchInput" class="form-control" placeholder="Pesquisar dispositivo por nome, modelo, IP, ou grupo...">
+            </div>
 
             <!-- Tabela de dispositivos -->
             <table class="table table-bordered">
@@ -139,6 +189,20 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function() {
+            // Função para alternar o sidebar
+            $('#sidebarToggle').click(function() {
+                $('.sidebar').toggleClass('show');
+                $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+            });
+
+            // Função de filtragem
+            $('#searchInput').on('keyup', function() {
+                const value = $(this).val().toLowerCase();
+                $('#deviceTableBody tr').filter(function() {
+                    $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
+                });
+            });
+
             // Evento para abrir o modal ao clicar em "Gerenciar"
             $('.manage-btn').click(function() {
                 const deviceId = $(this).data('id');

@@ -3,17 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Gerenciamento de Usuários</title>
+    <title>Dashboard - Projeto SEGURA</title>
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
-    <!-- Link do Bootstrap CSS -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
             display: flex;
             min-height: 100vh;
+            margin: 0;
             background-color: #f8f9fa;
+            overflow-x: hidden;
         }
+
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -21,6 +23,14 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.hide {
+            transform: translateX(-250px);
         }
         .sidebar h2 {
             font-size: 1.5rem;
@@ -38,30 +48,63 @@
             background-color: #495057;
             color: #ffc107;
         }
+
+        #sidebarToggle {
+            font-size: 1.5rem;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            color: white; /* Começa como branco */
+            transition: color 0.3s ease;
+        }
+        /* Cor ajustada ao estado da sidebar */
+        #sidebarToggle.toggle-on {
+            color: #343a40; /* Fica escuro quando a sidebar está escondida */
+        }
+
         .content {
             flex-grow: 1;
             padding: 30px;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
             text-align: center;
         }
-        .content h2 {
-            color: #343a40;
+        .content.shrink {
+            margin-left: 0;
         }
+
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar.hide {
+                transform: translateX(-250px);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            #sidebarToggle {
+                display: block;
+            }
+        }
+
         .welcome-section {
             margin-top: 30px;
         }
         .welcome-section img {
-            max-width: 300px; /* Ajuste o tamanho da imagem conforme necessário */
+            max-width: 300px;
             margin: 20px auto;
-        }
-        .card {
-            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
 
-    <!-- Sidebar -->
-    <div class="sidebar">
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <div class="sidebar" id="sidebar">
         <h2>Menu</h2>
         <a href="/createuser"><i class="fas fa-user-plus"></i> Gerenciar Usuários</a>
         <a href="/addmodel"><i class="fas fa-network-wired"></i> Adicionar Modelo</a>
@@ -69,12 +112,9 @@
         <a href="/logout"><i class="fas fa-sign-out-alt"></i> Sair</a>
     </div>
 
-    <!-- Main Content -->
-    <div class="content">
+    <div class="content" id="mainContent">
         <h1 class="text-center">Dashboard</h1>
         <div class="container mt-4">
-            <!-- Welcome Section with Image and Message -->
-            <br><br>
             <div class="welcome-section">
                 <h3>Bem Vindo ao Sistema Especializado no Gerenciamento Unificado de Redes com Access Points de baixo custo</h3>
                 <img src="static/LOGO_SEGURA.png" alt="Logo Segura">
@@ -82,9 +122,20 @@
         </div>
     </div>
 
-    <!-- Link do Bootstrap JS e dependências -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById("sidebarToggle").addEventListener("click", function() {
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("mainContent");
+
+            sidebar.classList.toggle("hide");
+            content.classList.toggle("shrink");
+
+            // Alterna a cor do ícone de acordo com o estado
+            this.classList.toggle("toggle-on");
+        });
+    </script>
 </body>
 </html>

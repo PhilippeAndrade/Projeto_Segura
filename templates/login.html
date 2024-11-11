@@ -1,41 +1,52 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!-- Define a codificação de caracteres e a escala para dispositivos móveis -->
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login - Controladora de APs Segura</title>
 
-    <!-- Favicon do site -->
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
-
-    <!-- Importa o CSS do Bootstrap para estilos rápidos -->
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
-    
-    <!-- Importa o arquivo de estilos personalizado -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/styles.css') }}">
     <style>
-        /* Estilo de fundo da página com imagem de fundo */
+        /* Ajuste do fundo da página e imagem */
         body {
             background-color: #C0C8CE;
             background-image: url('{{ url_for("static", filename="background-image.jpg") }}');
             background-size: cover;
             background-position: center;
             background-repeat: no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
         }
-        /* Centraliza o logo */
-        .logo-container {
-            text-align: center;
-            margin-bottom: 30px;
+
+        /* Estilos do contêiner principal e do formulário */
+        .container-fluid {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            padding: 20px;
         }
-        /* Estilos do formulário de login */
+        
         .form-container {
             background-color: white;
             padding: 20px;
-            border-radius: 5px;
-            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.2);
+            max-width: 100%;
+            width: 100%;
+            margin: 20px;
         }
-        /* Estilos para a seção de senha com o ícone de alternar visibilidade */
+
+        /* Logo centralizado */
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        /* Estilos para o ícone de visibilidade de senha */
         .password-container {
             position: relative;
         }
@@ -45,79 +56,84 @@
             top: 50%;
             transform: translateY(0%);
             cursor: pointer;
-            font-size: 1.5rem;
+            font-size: 1.25rem;
             line-height: 1;
         }
-        /* Estilo da mensagem de erro em vermelho */
+
+        /* Estilo das mensagens de erro */
         .alert-danger {
             background-color: #f8d7da;
             color: #721c24;
             border-color: #f5c6cb;
             box-shadow: 0px 4px 8px rgba(114, 28, 36, 0.4);
         }
+
+        /* Ajuste de responsividade para dispositivos menores */
+        @media (max-width: 576px) {
+            .form-container {
+                padding: 15px;
+                box-shadow: none;
+            }
+        }
     </style>
 </head>
 <body>
-    <!-- Estrutura principal da página com o formulário de login -->
     <div class="container-fluid">
-        <div class="row justify-content-center align-items-center min-vh-100">
-            <div class="col-md-4 col-sm-6 col-10">
-                <div class="logo-container">
-                    <!-- Logo da empresa ou do site -->
-                    <img src="{{ url_for('static', filename='LOGO_SEGURA.png') }}" alt="Logo Segura" class="logo mb-4 img-fluid">
-                </div>
-                <div class="form-container text-center">
-                    <h2>Faça seu Login</h2>
+        <div class="col-md-4 col-sm-8 col-10">
+            <div class="logo-container">
+                <img src="{{ url_for('static', filename='LOGO_SEGURA.png') }}" alt="Logo Segura" class="logo mb-4 img-fluid" style="max-width: 60%;">
+            </div>
+            <div class="form-container text-center">
+                <h2>Faça seu Login</h2>
+                <br>
+                
+                <!-- Mensagem de logout -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul class="list-unstyled" id="logout-flashes">
+                            {% for category, message in messages %}
+                                {% if 'deslogado' in message.lower() %}
+                                    <li class="alert alert-{{ category }}">{{ message }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endwith %}
+
+                <!-- Outras mensagens flash -->
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                    {% if messages %}
+                        <ul class="list-unstyled" id="flashes">
+                            {% for category, message in messages %}
+                                {% if 'deslogado' not in message.lower() %}
+                                    <li class="alert alert-{{ category }}">{{ message }}</li>
+                                {% endif %}
+                            {% endfor %}
+                        </ul>
+                    {% endif %}
+                {% endwith %}
+                
+                <!-- Formulário de login -->
+                <form method="POST" action="{{ url_for('login') }}">
+                    {{ form.hidden_tag() }}
+                    
+                    <div class="form-group">
+                        {{ form.username.label(class="form-label") }}
+                        {{ form.username(class="form-control form-control-lg", placeholder="Username", required=True, autofocus=True) }}
+                    </div>
+
+                    <div class="form-group password-container">
+                        {{ form.password.label(class="form-label") }}
+                        {{ form.password(class="form-control form-control-lg", placeholder="Password", id="password", required=True) }}
+                        <span class="toggle-password" onclick="togglePassword()">
+                            🙉
+                        </span>
+                    </div>
                     <br>
-                    
-                    <!-- Exibe apenas a mensagem de logout -->
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            <ul class="list-unstyled" id="logout-flashes">
-                                {% for category, message in messages %}
-                                    {% if 'deslogado' in message.lower() %}
-                                        <li class="alert alert-{{ category }}">{{ message }}</li>
-                                    {% endif %}
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    {% endwith %}
-
-                    <!-- Exibe todas as outras mensagens flash, exceto "deslogado" -->
-                    {% with messages = get_flashed_messages(with_categories=true) %}
-                        {% if messages %}
-                            <ul class="list-unstyled" id="flashes">
-                                {% for category, message in messages %}
-                                    {% if 'deslogado' not in message.lower() %}
-                                        <li class="alert alert-{{ category }}">{{ message }}</li>
-                                    {% endif %}
-                                {% endfor %}
-                            </ul>
-                        {% endif %}
-                    {% endwith %}
-                    
-                    <!-- Formulário de login -->
-                    <form method="POST" action="{{ url_for('login') }}">
-                        {{ form.hidden_tag() }}
-                        
-                        <div class="form-group">
-                            {{ form.username.label(class="form-label") }}
-                            {{ form.username(class="form-control form-control-lg", placeholder="Username", required=True, autofocus=True) }}
-                        </div>
-
-                        <div class="form-group password-container">
-                            {{ form.password.label(class="form-label") }}
-                            {{ form.password(class="form-control form-control-lg", placeholder="Password", id="password", required=True) }}
-                            <span class="toggle-password" onclick="togglePassword()">
-                                🙉
-                            </span>
-                        </div>
-                        <br>
-                        <div class="form-group">
-                            {{ form.submit(class="btn btn-primary btn-block btn-lg") }}
-                        </div>
-                    </form>
-                </div>
+                    <div class="form-group">
+                        {{ form.submit(class="btn btn-primary btn-block btn-lg") }}
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -130,32 +146,32 @@
     <script>
         // Função para alternar a visibilidade da senha
         function togglePassword() {
-            const passwordField = document.getElementById('password'); // Campo de senha
-            const toggleIcon = document.querySelector('.toggle-password'); // Ícone de alternância
-            if (passwordField.type === 'password') { // Se o tipo do campo é "password"
-                passwordField.type = 'text'; // Altera para "text" para mostrar a senha
-                toggleIcon.innerHTML = '🙈'; // Altera o ícone para um ícone aberto
-            } else { // Caso contrário
-                passwordField.type = 'password'; // Altera para "password" para ocultar a senha
-                toggleIcon.innerHTML = '🙉'; // Altera o ícone para um ícone fechado
+            const passwordField = document.getElementById('password');
+            const toggleIcon = document.querySelector('.toggle-password');
+            if (passwordField.type === 'password') {
+                passwordField.type = 'text';
+                toggleIcon.innerHTML = '🙈';
+            } else {
+                passwordField.type = 'password';
+                toggleIcon.innerHTML = '🙉';
             }
         }
 
         // Remove as mensagens flash de logout após 2 segundos
         setTimeout(() => {
-            const logoutFlashes = document.getElementById('logout-flashes'); // Seleciona o elemento de logout
+            const logoutFlashes = document.getElementById('logout-flashes');
             if (logoutFlashes) {
-                logoutFlashes.style.display = 'none'; // Oculta o elemento de mensagens de logout
+                logoutFlashes.style.display = 'none';
             }
-        }, 2000); // Define o tempo de 2 segundos
+        }, 2000);
 
         // Remove outras mensagens flash após 2 segundos
         setTimeout(() => {
-            const flashes = document.getElementById('flashes'); // Seleciona o elemento das outras mensagens
+            const flashes = document.getElementById('flashes');
             if (flashes) {
-                flashes.style.display = 'none'; // Oculta o elemento das mensagens gerais
+                flashes.style.display = 'none';
             }
-        }, 2000); // Define o tempo de 2 segundos
+        }, 2000);
     </script>
 </body>
 </html>

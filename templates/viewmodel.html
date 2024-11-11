@@ -7,7 +7,8 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        body { display: flex; min-height: 100vh; background-color: #f8f9fa; }
+        body { display: flex; min-height: 100vh; background-color: #f8f9fa; margin: 0; }
+        /* Sidebar */
         .sidebar {
             width: 250px;
             background-color: #343a40;
@@ -15,6 +16,14 @@
             display: flex;
             flex-direction: column;
             padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente */
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0; /* Sidebar visível */
         }
         .sidebar h2 { font-size: 1.5rem; text-align: center; margin-bottom: 1rem; }
         .sidebar a {
@@ -28,12 +37,63 @@
             background-color: #495057;
             color: #ffc107;
         }
-        .content { flex-grow: 1; padding: 0px; display: flex; justify-content: center; align-items: flex-start; }
-        .form-container { max-width: 600px; margin-top: 0px; background: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); text-align: center; }
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+        /* Conteúdo */
+        .content {
+            flex-grow: 1;
+            padding: 0px;
+            margin-left: 250px; /* Deixa espaço para a sidebar */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            transition: margin-left 0.3s ease;
+        }
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px; /* Sidebar oculta em telas pequenas */
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0; /* Sidebar visível em telas pequenas */
+            }
+        }
+        /* Estilo do formulário */
+        .form-container {
+            max-width: 600px;
+            margin-top: 0px;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        /* Mensagem de resultado */
         .message-box { font-size: 0.9rem; margin-top: 15px; opacity: 1; transition: opacity 2s ease; }
     </style>
 </head>
 <body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
 
     <!-- Sidebar -->
     <div class="sidebar">
@@ -79,6 +139,14 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 
     <script>
+        // Função de Toggle da Sidebar
+        $(document).ready(function() {
+            $('#sidebarToggle').click(function() {
+                $('.sidebar').toggleClass('show');
+                $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+            });
+        });
+
         // Função para exibir a mensagem de resultado dentro do form-container
         function showResultMessage(message, isSuccess = true) {
             const resultMessage = document.getElementById('resultMessage');
@@ -97,7 +165,7 @@
         }
 
         // Exemplo de teste para visualizar a mensagem
-        // showResultMessage("Modelos visualizados com sucesso!", true);
+        //showResultMessage("Modelos visualizados com sucesso!", true);
     </script>
 
 </body>

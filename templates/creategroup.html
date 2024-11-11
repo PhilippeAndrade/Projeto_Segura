@@ -1,95 +1,132 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <!-- Declaração do tipo de documento como HTML5 -->
-    <meta charset="UTF-8"> <!-- Define a codificação de caracteres como UTF-8 para suportar caracteres especiais -->
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"> <!-- Configuração de viewport para responsividade em dispositivos móveis -->
-    <title>Criar Grupo</title> <!-- Título da página exibido na aba do navegador -->
-    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png"> <!-- Ícone da página exibido na aba do navegador -->
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Criar Grupo</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     
-    <!-- Link para o CSS do Bootstrap para estilização rápida e responsiva -->
+    <!-- Bootstrap CSS para estilização responsiva -->
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
-    
-    <!-- Link para a biblioteca de ícones Font Awesome para uso de ícones na página -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     
     <style>
-        /* Estilo CSS da página, semelhante ao createuser.html */
-        
+        /* Layout principal */
         body {
-            display: flex; /* Define o layout como flexbox */
-            min-height: 100vh; /* Define altura mínima como a altura total da viewport */
-            background-color: #f8f9fa; /* Define a cor de fundo da página */
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
         }
-        
+
+        /* Sidebar */
         .sidebar {
-            width: 250px; /* Largura da barra lateral */
-            background-color: #343a40; /* Cor de fundo da barra lateral */
-            color: white; /* Cor do texto na barra lateral */
-            display: flex; /* Define a barra como flex container */
-            flex-direction: column; /* Organiza os elementos em coluna */
-            padding-top: 20px; /* Espaçamento superior */
-            transition: all 0.3s ease; /* Transição suave para mudanças de estilo */
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente */
+            transition: 0.3s;
+            z-index: 1000;
         }
-        
+        .sidebar.show {
+            left: 0;
+        }
         .sidebar h2 {
-            font-size: 1.5rem; /* Tamanho da fonte do título */
-            text-align: center; /* Alinha o texto ao centro */
-            margin-bottom: 1rem; /* Espaçamento inferior do título */
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
         }
-        
         .sidebar a {
-            color: white; /* Cor dos links */
-            padding: 15px 20px; /* Espaçamento interno dos links */
-            font-size: 1.1rem; /* Tamanho da fonte dos links */
-            transition: background 0.3s ease; /* Transição suave para o efeito de hover */
-            text-decoration: none; /* Remove sublinhado dos links */
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            text-decoration: none;
+            transition: background 0.3s ease;
         }
-        
         .sidebar a:hover, .sidebar a.active {
-            background-color: #495057; /* Cor de fundo ao passar o mouse ou para o link ativo */
-            color: #ffc107; /* Cor do texto do link ativo ou com hover */
+            background-color: #495057;
+            color: #ffc107;
         }
-        
+
+        /* Toggle da Sidebar no Mobile */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Altera a cor do ícone para branco quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+
+        /* Conteúdo principal */
         .content {
-            flex-grow: 1; /* Expande o conteúdo para ocupar o espaço restante */
-            padding: 30px; /* Espaçamento interno no conteúdo */
+            flex-grow: 1;
+            margin-left: 250px;
+            padding: 30px;
+            transition: margin-left 0.3s;
         }
-        
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+        }
+
+        /* Container do formulário */
         .form-container {
-            max-width: 600px; /* Largura máxima do formulário */
-            margin: auto; /* Centraliza o formulário horizontalmente */
-            background: #ffffff; /* Cor de fundo do formulário */
-            padding: 30px; /* Espaçamento interno no formulário */
-            border-radius: 8px; /* Borda arredondada do formulário */
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); /* Sombra ao redor do formulário */
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         }
-        
+
+        /* Mensagem de erro */
+        .error-message {
+            color: red;
+            display: none;
+            font-size: 0.9rem;
+        }
+
+        /* Botão primário */
         .btn-primary {
-            background-color: #007bff; /* Cor de fundo do botão primário */
-            border-color: #007bff; /* Cor da borda do botão primário */
+            background-color: #007bff;
+            border-color: #007bff;
         }
-        
         .btn-primary:hover {
-            background-color: #0056b3; /* Cor de fundo do botão ao passar o mouse */
-            border-color: #0056b3; /* Cor da borda do botão ao passar o mouse */
+            background-color: #0056b3;
+            border-color: #0056b3;
         }
-        
+
+        /* Mensagem de resultado */
         #resultMessage {
-            margin-top: 15px; /* Espaçamento superior da mensagem de resultado */
-            font-size: 0.9rem; /* Tamanho da fonte da mensagem de resultado */
-            opacity: 1; /* Define a opacidade inicial da mensagem */
-            transition: opacity 2s ease; /* Transição suave da opacidade para aparecer/desaparecer */
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 1;
+            transition: opacity 2s ease;
         }
     </style>
 </head>
 <body>
 
+    <!-- Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
     <!-- Sidebar (barra lateral) -->
     <div class="sidebar">
-        <h2>Menu</h2> <!-- Título da barra lateral -->
-        
-        <!-- Links de navegação na barra lateral -->
+        <h2>Menu</h2>
         <a href="/adddevice"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
         <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
         <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
@@ -101,90 +138,87 @@
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
-    <!-- Área de conteúdo principal -->
+    <!-- Conteúdo principal -->
     <div class="content">
         <div class="form-container">
-            <h2 class="text-center mb-4">Criar Novo Grupo</h2> <!-- Título do formulário, centralizado -->
-            
-            <!-- Formulário de criação de grupo -->
+            <h2 class="text-center mb-4">Criar Novo Grupo</h2>
             <form id="groupForm">
                 <div class="form-group">
-                    <label for="groupname" class="font-weight-bold">Nome do Grupo</label> <!-- Rótulo do campo de entrada -->
-                    <input type="text" id="groupname" class="form-control" placeholder="Nome do Grupo"> <!-- Campo de entrada para o nome do grupo -->
-                    <small class="error-message" id="groupnameError">O nome do grupo é obrigatório.</small> <!-- Mensagem de erro exibida se o campo for inválido -->
+                    <label for="groupname" class="font-weight-bold">Nome do Grupo</label>
+                    <input type="text" id="groupname" class="form-control" placeholder="Nome do Grupo">
+                    <small class="error-message" id="groupnameError">O nome do grupo é obrigatório.</small>
                 </div>
-                
                 <div class="form-group text-center">
-                    <button type="button" id="submitBtn" class="btn btn-primary btn-block">Criar Grupo</button> <!-- Botão para submeter o formulário -->
+                    <button type="button" id="submitBtn" class="btn btn-primary btn-block">Criar Grupo</button>
                 </div>
             </form>
-            <div id="resultMessage" class="text-center"></div> <!-- Área para exibir mensagem de resultado -->
+            <div id="resultMessage" class="text-center"></div>
         </div>
     </div>
 
-    <!-- Scripts JavaScript para manipulação do formulário -->
-    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script> <!-- Biblioteca jQuery para manipulação de DOM e AJAX -->
+    <!-- Scripts JavaScript -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
-        // Executa quando o conteúdo da página é carregado
         document.addEventListener("DOMContentLoaded", function() {
-            const groupnameField = document.getElementById("groupname"); // Campo de entrada do nome do grupo
-            const groupnameError = document.getElementById("groupnameError"); // Mensagem de erro do nome do grupo
-            const resultMessage = document.getElementById("resultMessage"); // Mensagem de resultado
-            const submitBtn = document.getElementById("submitBtn"); // Botão de envio do formulário
+            const groupnameField = document.getElementById("groupname");
+            const groupnameError = document.getElementById("groupnameError");
+            const resultMessage = document.getElementById("resultMessage");
+            const submitBtn = document.getElementById("submitBtn");
 
-            // Função para validar o formulário
             function validateForm() {
                 let valid = true;
-                if (groupnameField.value.trim() === "") { // Verifica se o campo está vazio
-                    groupnameError.style.display = "block"; // Exibe a mensagem de erro
+                if (groupnameField.value.trim() === "") {
+                    groupnameError.style.display = "block";
                     valid = false;
                 } else {
-                    groupnameError.style.display = "none"; // Oculta a mensagem de erro
+                    groupnameError.style.display = "none";
                 }
-                return valid; // Retorna verdadeiro se o formulário for válido
+                return valid;
             }
 
-            // Função para submeter o formulário via AJAX
             function submitForm() {
-                if (validateForm()) { // Executa somente se o formulário for válido
+                if (validateForm()) {
                     $.ajax({
-                        url: "{{ url_for('create_group') }}", // URL da rota para criar grupo
-                        type: "POST", // Tipo de requisição HTTP
-                        contentType: "application/json", // Define o conteúdo como JSON
+                        url: "{{ url_for('create_group') }}",
+                        type: "POST",
+                        contentType: "application/json",
                         data: JSON.stringify({
-                            nome: groupnameField.value // Dados do grupo em JSON
+                            nome: groupnameField.value
                         }),
-                        success: function(response) { // Função executada se a requisição for bem-sucedida
+                        success: function(response) {
                             if (response.success) {
-                                resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`; // Exibe mensagem de sucesso
-                                resultMessage.style.opacity = 1; // Torna a mensagem visível
-                                groupnameField.value = ""; // Limpa o campo de entrada
+                                resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
+                                resultMessage.style.opacity = 1;
+                                groupnameField.value = "";
                                 setTimeout(function() {
-                                    resultMessage.style.opacity = 0; // Desaparece a mensagem após 2 segundos
+                                    resultMessage.style.opacity = 0;
                                 }, 2000);
                             } else {
-                                resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`; // Exibe mensagem de erro
-                                resultMessage.style.opacity = 1; // Torna a mensagem visível
+                                resultMessage.innerHTML = `<span class="text-danger">${response.message}</span>`;
+                                resultMessage.style.opacity = 1;
                             }
                         },
-                        error: function() { // Função executada se houver erro na requisição
+                        error: function() {
                             resultMessage.innerHTML = `<span class="text-danger">Erro ao processar o pedido. Tente novamente.</span>`;
-                            resultMessage.style.opacity = 1; // Torna a mensagem visível
+                            resultMessage.style.opacity = 1;
                         }
                     });
                 }
             }
 
-            // Adiciona evento de clique no botão "Criar Grupo" para submeter o formulário
             submitBtn.addEventListener("click", submitForm);
-
-            // Detecta pressionamento da tecla Enter e aciona o botão de envio
             groupnameField.addEventListener("keydown", function(event) {
-                if (event.key === "Enter") { // Verifica se a tecla pressionada é "Enter"
-                    event.preventDefault(); // Impede o comportamento padrão do Enter
-                    submitForm(); // Aciona o envio do formulário
+                if (event.key === "Enter") {
+                    event.preventDefault();
+                    submitForm();
                 }
             });
+        });
+
+        // Alterna a exibição da sidebar e a cor do ícone
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40'); // Altera a cor do ícone
         });
     </script>
 </body>
