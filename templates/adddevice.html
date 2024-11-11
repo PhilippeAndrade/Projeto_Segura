@@ -104,15 +104,13 @@
             margin-top: 15px;
             font-size: 0.9rem;
             opacity: 1;
-            transition: opacity 2s ease;
+            transition: opacity 2s ease; /* Adiciona a transição de opacidade */
         }
     </style>
 </head>
 <body>
-    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
     <i id="sidebarToggle" class="fas fa-bars"></i>
 
-    <!-- Sidebar -->
     <div class="sidebar">
         <h2>Menu</h2>
         <a href="/adddevice" class="active"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
@@ -126,7 +124,6 @@
         <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
     </div>
 
-    <!-- Content -->
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Cadastrar Novo Dispositivo</h2>
@@ -185,7 +182,6 @@
         </div>
     </div>
 
-    <!-- jQuery -->
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script>
         $(document).ready(function() {
@@ -208,7 +204,6 @@
             $('#access_type').change(toggleUsernameField);
             toggleUsernameField();
 
-            // Função para validar o MAC Address
             function validateMacAddress() {
                 const macAddress = $('#mac_address').val();
                 const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
@@ -231,6 +226,7 @@
                     $('#resultMessage').text('Por favor, insira um MAC Address válido.').removeClass('text-success').addClass('text-danger').show();
                     return;
                 }
+
                 const formData = {
                     nome: $('#nome').val(),
                     id_modelo: $('#id_modelo').val(),
@@ -251,9 +247,17 @@
                         $('#resultMessage').text(response.message).removeClass('text-danger').addClass('text-success').show();
                         $('#deviceForm')[0].reset();
                         toggleUsernameField();
+
+                        setTimeout(function() {
+                            $('#resultMessage').fadeOut(2000);
+                        }, 2000); 
                     },
                     error: function(error) {
                         $('#resultMessage').text(error.responseJSON.message).removeClass('text-success').addClass('text-danger').show();
+                        
+                        setTimeout(function() {
+                            $('#resultMessage').fadeOut(2000);
+                        }, 2000);
                     }
                 });
             });
