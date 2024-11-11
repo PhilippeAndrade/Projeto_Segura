@@ -8,9 +8,9 @@ import os  # Para manipulação do sistema operacional, como a geração de uma 
 import bcrypt  # Para criptografar e verificar senhas
 from functools import wraps  # Para criar decoradores personalizados
 from cryptography.fernet import Fernet
+import importlib.util
 
 
-b'0Ry0Np_T-51ZtqPtzyX0hcrpfcTCa-a15baaZjuiwEk=' 
 # Inicializa o aplicativo Flask
 app = Flask(__name__)
 app.secret_key = os.urandom(24)  # Gera uma chave secreta aleatória para as sessões
@@ -718,13 +718,8 @@ def delete_group():
     return render_template('deletegroup.html', grupos=grupos)
 
 
-
-
-
-
-# Rota para gerenciar dispositivos
-@app.route('/managerdevices', methods=['GET', 'POST'])
-def manager_devices():
+@app.route('/managergroups', methods=['GET', 'POST'])
+def manager_groups():
     if request.method == 'POST':
         # Filtragem de dispositivos por grupo usando AJAX
         group_id = request.json.get('group_id')  # Recebe o `group_id` via JSON no corpo da requisição
@@ -766,6 +761,79 @@ def manager_devices():
         # Retorna a lista de dispositivos filtrados como JSON
         return jsonify({"devices": dispositivos_list})
 
+    # Método GET para carregar a página de gerenciamento de grupos com todos os grupos e dispositivos
+    cursor = mysql.connection.cursor()
+
+    # Carregar todos os grupos
+    cursor.execute("SELECT id_grupo, nome FROM grupo")
+    grupos = cursor.fetchall()
+
+    # Carregar todos os dispositivos
+    cursor.execute("""
+        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+        FROM dispositivos d
+        LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+        LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+    """)
+    dispositivos = cursor.fetchall()
+    cursor.close()
+
+    # Renderiza o template com todos os dispositivos e grupos para o carregamento inicial
+    return render_template('managergroups.html', dispositivos=dispositivos, grupos=grupos)
+
+
+
+# Rota para gerenciar dispositivos
+@app.route('/managerdevices', methods=['GET', 'POST'])
+def manager_devices():
+    if request.method == 'POST':
+        # Recebe o `group_id` e `nome_dispositivo` via JSON no corpo da requisição
+        group_id = request.json.get('group_id')
+        nome_dispositivo = request.json.get('nome_dispositivo')
+
+        cursor = mysql.connection.cursor()
+
+        # Define a consulta base
+        query = """
+            SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+            FROM dispositivos d
+            LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+            LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+            WHERE 1=1
+        """
+        params = []
+
+        # Filtra pelo grupo, se especificado
+        if group_id:
+            query += " AND d.id_grupo = %s"
+            params.append(group_id)
+
+        # Filtra pelo nome do dispositivo, se especificado
+        if nome_dispositivo:
+            query += " AND d.nome LIKE %s"
+            params.append(f"%{nome_dispositivo}%")
+
+        # Executa a consulta com os parâmetros
+        cursor.execute(query, tuple(params))
+        dispositivos = cursor.fetchall()
+        cursor.close()
+
+        # Formata os dispositivos para o formato JSON
+        dispositivos_list = [
+            {
+                "id_dispositivo": dispositivo[0],
+                "nome": dispositivo[1],
+                "modelo_nome": dispositivo[2],
+                "grupo_nome": dispositivo[3],
+                "mac_address": dispositivo[4],
+                "ip": dispositivo[5]
+            }
+            for dispositivo in dispositivos
+        ]
+
+        # Retorna a lista de dispositivos filtrados como JSON
+        return jsonify({"devices": dispositivos_list})
+
     # Método GET para carregar a página de gerenciamento com todos os grupos e dispositivos
     cursor = mysql.connection.cursor()
 
@@ -785,6 +853,8 @@ def manager_devices():
 
     # Renderiza o template com todos os dispositivos e grupos para o carregamento inicial
     return render_template('managerdevices.html', dispositivos=dispositivos, grupos=grupos)
+
+
 
 #Rota para upload de scripts
 @app.route('/uploadscript', methods=['GET', 'POST'])
@@ -837,7 +907,93 @@ def upload_script():
     return render_template('upload_script.html', router_models=modelos_com_pasta)
 
 
+@app.route('/test-connection/<int:device_id>', methods=['POST'])
+@login_required
+def test_connection(device_id):
+    # Obtém as informações do dispositivo (IP, modelo, etc.)
+    device_info = get_device_info(device_id)
+    
+    if not device_info:
+        return jsonify({"success": False, "message": "Dispositivo não encontrado."}), 404
 
+    # Identifica o modelo do dispositivo e o caminho do script Testar_conexao.py
+    model_name = device_info['model_name']
+    script_path = f'scripts/{model_name}/Testar_conexao.py'
+
+    # Verifica se o arquivo de script existe
+    if not os.path.isfile(script_path):
+        return jsonify({"success": False, "message": "Script de teste de conexão não encontrado para este modelo."}), 404
+
+    # Carrega o módulo do script de forma dinâmica
+    spec = importlib.util.spec_from_file_location("Testar_conexao", script_path)
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+
+    # Executa a função `main` do script, passando o IP do dispositivo e capturando o resultado
+    try:
+        result = module.main(device_info['ip'])  # Passa o IP do dispositivo para o script
+        return jsonify({"success": True, "message": result})
+    except Exception as e:
+        return jsonify({"success": False, "message": f"Erro ao executar 'Testar_conexao': {str(e)}"}), 500
+    
+    
+
+@app.route('/get-scripts/<model_name>/<int:device_id>', methods=['GET'])
+@login_required
+def get_scripts_with_ip(model_name, device_id):
+    # Caminho da pasta do modelo
+    model_path = os.path.join('scripts', model_name)
+    print(f"Debug: Verificando a existência do caminho {model_path}")
+
+    # Verifica se a pasta do modelo existe
+    if not os.path.isdir(model_path):
+        print("Debug: Pasta do modelo não encontrada")
+        return jsonify({"success": False, "message": "Pasta do modelo não encontrada."}), 404
+
+    # Lista todos os arquivos .py na pasta do modelo
+    scripts = [f for f in os.listdir(model_path) if f.endswith('.py')]
+    print(f"Debug: Scripts encontrados - {scripts}")
+
+    # Obtém o IP do dispositivo do banco de dados
+    cursor = mysql.connection.cursor()
+    cursor.execute("SELECT ip FROM dispositivos WHERE id_dispositivo = %s", (device_id,))
+    device = cursor.fetchone()
+    cursor.close()
+
+    # Verifica se o dispositivo foi encontrado
+    if not device:
+        print("Debug: Dispositivo não encontrado no banco de dados")
+        return jsonify({"success": False, "message": "Dispositivo não encontrado."}), 404
+
+    # Extrai o IP do dispositivo (primeiro elemento da tupla)
+    device_ip = device[0]
+    print(f"Debug: IP do dispositivo - {device_ip}")
+
+    return jsonify({
+        "scripts": scripts,
+        "ip": device_ip  # Retorna o IP do dispositivo
+    })
+    
+    
+def get_device_info(device_id):
+    cursor = mysql.connection.cursor()
+    cursor.execute("""
+        SELECT d.ip, m.nome AS model_name
+        FROM dispositivos d
+        JOIN modelo m ON d.id_modelo = m.id_modelo
+        WHERE d.id_dispositivo = %s
+    """, (device_id,))
+    device = cursor.fetchone()
+    cursor.close()
+
+    if device:
+        # device[0] é o IP e device[1] é o nome do modelo
+        return {
+            "ip": device[0],
+            "model_name": device[1]
+        }
+    else:
+        return None    
 
 # Tratamento de erro 404
 @app.errorhandler(404)
