@@ -930,16 +930,11 @@ def execute_script(model_name, device_id, script_name):
     for param, value in parametros.items():
         comando_script += f" --{param} {value}"
     
-    print("Executando comando:", comando_script)  # Log para depuração
-
     # Executa o script
     try:
         resultado_execucao = subprocess.run(
             comando_script, shell=True, capture_output=True, text=True
         )
-
-        print("Saída do script:", resultado_execucao.stdout)  # Log de saída do script
-        print("Erro do script:", resultado_execucao.stderr)   # Log de erros do script
         
         if resultado_execucao.returncode != 0:
             return jsonify({
