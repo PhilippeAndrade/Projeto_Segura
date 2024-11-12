@@ -935,7 +935,7 @@ def execute_script(model_name, device_id, script_name):
         resultado_execucao = subprocess.run(
             comando_script, shell=True, capture_output=True, text=True
         )
-        
+        print(comando_script)
         if resultado_execucao.returncode != 0:
             return jsonify({
                 "message": "Erro ao executar o script.",

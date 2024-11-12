@@ -178,6 +178,10 @@
                     <p>Selecione uma configuração para o dispositivo:</p>
                     <ul id="scriptList" class="list-group">
                     </ul>
+                    <div class="form-check">
+                        <input type="checkbox" class="form-check-input" id="useCredentialsCheckbox">
+                        <label class="form-check-label" for="useCredentialsCheckbox">Usar credenciais de usuário e senha</label>
+                    </div>
                     <div id="inputFields" class="mt-3"></div>
                 </div>
                 <div class="modal-footer">
@@ -258,28 +262,20 @@
                 
                 const ip = $(this).data('ip');
                 const username = $(this).data('username');
-                const senha = $(this).data('senha');
-                const accessType = $(this).data('access');
                 const parametros = $(this).data('parametros');
 
-                $('#inputFields').html(`
+                $('#inputFields').empty();
+                $('#inputFields').append(`
                     <label>IP do Dispositivo:</label>
                     <input type="text" class="form-control" value="${ip}" readonly>
-                    <label>Access Type:</label>
-                    <input type="text" class="form-control" value="${accessType}" readonly>
                 `);
 
-                if (accessType === 'user_password' && username) {
+                if (username) {
                     $('#inputFields').append(`
                         <label>Usuário:</label>
                         <input type="text" class="form-control" value="${username}" readonly>
                     `);
                 }
-
-                $('#inputFields').append(`
-                    <label>Senha:</label>
-                    <input type="text" class="form-control" value="${senha}" readonly>
-                `);
 
                 parametros.forEach(param => {
                     $('#inputFields').append(`
@@ -310,12 +306,16 @@
                 });
 
                 const dadosEnvio = {
-                    ip: $('#scriptList .active').data('ip'), 
-                    username: $('#scriptList .active').data('username'),
-                    senha: $('#scriptList .active').data('senha'),
-                    access_type: $('#scriptList .active').data('access'),
+                    ip: $('#scriptList .active').data('ip'),
                     parametros: parametros
                 };
+
+                // Inclui `username` e `senha` se o checkbox for marcado
+                if ($('#useCredentialsCheckbox').is(':checked')) {
+                    dadosEnvio.username = $('#scriptList .active').data('username');
+                    dadosEnvio.senha = $('#scriptList .active').data('senha');
+                    dadosEnvio.access_type = $('#scriptList .active').data('access');
+                }
 
                 console.log("Dados enviados para execução do script:", dadosEnvio);
 
