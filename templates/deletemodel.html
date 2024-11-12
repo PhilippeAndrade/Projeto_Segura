@@ -217,6 +217,21 @@
                 $('.sidebar').toggleClass('show');
                 $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
             });
+
+            // Exibir mensagem armazenada temporariamente após o recarregamento
+            const message = sessionStorage.getItem('resultMessage');
+            if (message) {
+                $("#resultMessage").html(message).show();
+                sessionStorage.removeItem('resultMessage');
+                
+                // Aplicar fade-out na mensagem após 2 segundos
+                setTimeout(() => {
+                    $("#resultMessage").addClass("fade-out");
+                    setTimeout(() => {
+                        $("#resultMessage").removeClass("fade-out").hide();
+                    }, 2000);
+                }, 2000);
+            }
         });
 
         let modelToDelete = null;
@@ -235,21 +250,14 @@
             if (!modelToDelete) return;
 
             $.ajax({
-                url: `/delete_model/${modelToDelete}`,  // Rota de exclusão
+                url: `/deletemodel`,  // Rota de exclusão
                 type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ id_modelo: modelToDelete }),
                 success: function(response) {
                     if (response.success) {
-                        $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
-                        closeModal();
-                        $("#resultMessage").show();
-
-                        // Aplicar fade-out na mensagem após 2 segundos
-                        setTimeout(() => {
-                            $("#resultMessage").addClass("fade-out");
-                            setTimeout(() => {
-                                $("#resultMessage").removeClass("fade-out").hide();
-                            }, 2000);
-                        }, 2000);
+                        sessionStorage.setItem('resultMessage', `<span class="text-success">${response.message}</span>`);
+                        location.reload(); // Recarrega a página
                     } else {
                         $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
                         $("#resultMessage").show();

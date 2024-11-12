@@ -9,6 +9,8 @@ import bcrypt  # Para criptografar e verificar senhas
 from functools import wraps  # Para criar decoradores personalizados
 from cryptography.fernet import Fernet
 import importlib.util
+from datetime import timedelta
+import subprocess
 
 
 # Inicializa o aplicativo Flask
@@ -38,6 +40,8 @@ app.config['MYSQL_DB'] = "segura"
 # Inicializa a conexão com o MySQL
 mysql = MySQL(app)
 
+app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite de 16 MB para upload de arquivos
+app.config['REMEMBER_COOKIE_DURATION'] = timedelta(hours=2)  # Sessão de login válida por 2 horas
 
 def create_admin_user():
     try:
@@ -306,6 +310,7 @@ def view_devices():
 
 # Rota para alterar dispositivos
 @app.route('/alterdevices', methods=['GET', 'POST'])
+@login_required
 def alter_devices():
     if request.method == 'POST':
         # Recebe os dados enviados via AJAX para atualizar um dispositivo
@@ -605,48 +610,56 @@ def deletar_usuarios():
 
 @app.route('/deletemodel', methods=['GET', 'POST'])
 @login_required
-def deletemodel():
-    # Conectar ao banco de dados e obter todos os modelos
+def delete_model():
+    # Carregar todos os modelos
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id_modelo, nome FROM modelo")  # Assumindo que 'nome' representa o nome da pasta
+    cursor.execute("SELECT id_modelo, nome FROM modelo")
     modelos = cursor.fetchall()
     cursor.close()
 
-    if request.method == 'POST':  # Se a requisição é POST
-        modelos_para_deletar = request.form.getlist('modelos_para_deletar')  # Obtém os IDs dos modelos selecionados
+    if request.method == 'POST':
+        data = request.get_json()
+        modelo_id = data.get('id_modelo')
 
-        if modelos_para_deletar:  # Se algum modelo foi selecionado
-            try:
-                cursor = mysql.connection.cursor()
-                for modelo_id in modelos_para_deletar:
-                    # Obter o nome do modelo (usado para o nome da pasta)
-                    cursor.execute("SELECT nome FROM modelo WHERE id_modelo = %s", (modelo_id,))
-                    modelo_nome = cursor.fetchone()
+        if not modelo_id:
+            return jsonify({"success": False, "message": "ID do modelo não fornecido."}), 400
 
-                    if modelo_nome:
-                        modelo_folder = os.path.join('scripts', modelo_nome[0])  # Caminho da pasta do modelo
+        try:
+            cursor = mysql.connection.cursor()
 
-                        # Remover a pasta e seus arquivos
-                        if os.path.exists(modelo_folder):
-                            for root, dirs, files in os.walk(modelo_folder, topdown=False):
-                                for file in files:
-                                    os.remove(os.path.join(root, file))
-                                for dir in dirs:
-                                    os.rmdir(os.path.join(root, dir))
-                            os.rmdir(modelo_folder)
+            # Verificar se o modelo tem dispositivos associados
+            cursor.execute("SELECT COUNT(*) FROM dispositivos WHERE id_modelo = %s", (modelo_id,))
+            dispositivos_count = cursor.fetchone()[0]
+            if dispositivos_count > 0:
+                return jsonify({"success": False, "message": "Modelo possui dispositivos associados e não pode ser excluído."}), 400
 
-                    # Deletar o registro do modelo no banco de dados
-                    cursor.execute("DELETE FROM modelo WHERE id_modelo = %s", (modelo_id,))
+            # Obter o nome do modelo para exclusão da pasta
+            cursor.execute("SELECT nome FROM modelo WHERE id_modelo = %s", (modelo_id,))
+            modelo_nome = cursor.fetchone()
 
-                mysql.connection.commit()
-                cursor.close()
+            if modelo_nome:
+                modelo_folder = os.path.join('scripts', modelo_nome[0])
 
-                flash('Modelos excluídos com sucesso!', 'success')
-                return redirect(url_for('deletemodel'))
-            except Exception as e:
-                flash(f'Erro ao excluir modelo: {str(e)}', 'danger')
+                # Remove a pasta e seus arquivos, se existir
+                if os.path.exists(modelo_folder):
+                    for root, dirs, files in os.walk(modelo_folder, topdown=False):
+                        for file in files:
+                            os.remove(os.path.join(root, file))
+                        for dir in dirs:
+                            os.rmdir(os.path.join(root, dir))
+                    os.rmdir(modelo_folder)
+
+            # Deleta o registro do modelo no banco de dados
+            cursor.execute("DELETE FROM modelo WHERE id_modelo = %s", (modelo_id,))
+            mysql.connection.commit()
+            cursor.close()
+
+            return jsonify({"success": True, "message": "Modelo excluído com sucesso!"}), 200
+        except Exception as e:
+            return jsonify({"success": False, "message": f"Erro ao excluir modelo: {str(e)}"}), 500
 
     return render_template('deletemodel.html', modelos=modelos)
+
 
 @app.route('/creategroup', methods=['GET', 'POST'])
 @login_required
@@ -820,6 +833,132 @@ def manager_groups():
     # Renderiza o template com todos os dispositivos e grupos para o carregamento inicial
     return render_template('managergroups.html', dispositivos=dispositivos, grupos=grupos)
 
+@app.route('/get-scripts/<string:model_name>/<int:device_id>', methods=['GET'])
+def get_scripts(model_name, device_id):
+    cursor = mysql.connection.cursor()
+
+    try:
+        # Carregar os scripts associados ao modelo
+        cursor.execute("""
+            SELECT s.id_script, s.nome 
+            FROM Scripts s
+            JOIN modelo m ON s.id_modelo = m.id_modelo
+            WHERE m.nome = %s
+        """, (model_name,))
+        scripts = cursor.fetchall()
+
+        if not scripts:
+            return jsonify({"message": "Nenhum script encontrado para o modelo."}), 404
+
+        # Carregar informações do dispositivo
+        cursor.execute("""
+            SELECT ip, username, password, access_type 
+            FROM dispositivos 
+            WHERE id_dispositivo = %s
+        """, (device_id,))
+        device_data = cursor.fetchone()
+
+        if not device_data:
+            return jsonify({"message": "Dispositivo não encontrado."}), 404
+
+        ip, username, password_criptografada, access_type = device_data
+
+        # Descriptografar a senha
+        senha = cipher_suite.decrypt(password_criptografada.encode()).decode()
+
+        # Preparar lista de scripts com parâmetros
+        scripts_list = []
+        for script_id, script_name in scripts:
+            # Carregar parâmetros associados ao script
+            cursor.execute("""
+                SELECT nome_parametro 
+                FROM Parametros_scripts 
+                WHERE id_script = %s
+            """, (script_id,))
+            parametros = cursor.fetchall()
+            
+            scripts_list.append({
+                "script_id": script_id,
+                "script_name": script_name,
+                "parametros": [param[0] for param in parametros]
+            })
+
+        # Estrutura de dados a ser enviada ao cliente
+        response_data = {
+            "scripts": scripts_list,
+            "ip": ip,
+            "senha": senha,
+            "access_type": access_type
+        }
+        if access_type == 'user_password':
+            response_data["username"] = username
+
+        return jsonify(response_data)
+
+    except Exception as e:
+        return jsonify({"message": "Erro ao carregar scripts e dados do dispositivo", "error": str(e)}), 500
+
+    finally:
+        cursor.close()
+
+
+@app.route('/execute-script/<string:model_name>/<int:device_id>/<string:script_name>', methods=['POST'])
+def execute_script(model_name, device_id, script_name):
+    data = request.json
+    ip = data.get("ip")
+    username = data.get("username")
+    senha = data.get("senha")
+    access_type = data.get("access_type")
+    parametros = data.get("parametros", {})
+
+    # Atualize o caminho do script para refletir a estrutura 'scripts/mr30g/Alterar_rede.py'
+    base_dir = os.path.dirname(__file__)
+    script_path = os.path.join(base_dir, 'scripts', model_name, script_name)
+    
+    # Verifique se o caminho do script existe
+    if not os.path.isfile(script_path):
+        return jsonify({"message": "Script não encontrado no caminho especificado.", "path": script_path}), 404
+
+    # Monta o comando do script com o caminho atualizado
+    comando_script = f"python \"{script_path}\" --ip {ip}"
+    
+    if access_type == 'user_password':
+        comando_script += f" --username {username} --password {senha}"
+    elif access_type == 'password_only':
+        comando_script += f" --password {senha}"
+
+    for param, value in parametros.items():
+        comando_script += f" --{param} {value}"
+    
+    print("Executando comando:", comando_script)  # Log para depuração
+
+    # Executa o script
+    try:
+        resultado_execucao = subprocess.run(
+            comando_script, shell=True, capture_output=True, text=True
+        )
+
+        print("Saída do script:", resultado_execucao.stdout)  # Log de saída do script
+        print("Erro do script:", resultado_execucao.stderr)   # Log de erros do script
+        
+        if resultado_execucao.returncode != 0:
+            return jsonify({
+                "message": "Erro ao executar o script.",
+                "output": resultado_execucao.stderr
+            }), 500
+
+        return jsonify({
+            "message": "Script executado com sucesso!",
+            "output": resultado_execucao.stdout,
+            "command_executed": comando_script
+        })
+
+    except Exception as e:
+        print("Erro ao tentar executar o script:", str(e))  # Log de exceção
+        return jsonify({
+            "message": "Erro ao tentar executar o script.",
+            "error": str(e)
+        }), 500
 
 
 # Rota para gerenciar dispositivos
@@ -894,8 +1033,8 @@ def manager_devices():
     return render_template('managerdevices.html', dispositivos=dispositivos, grupos=grupos)
 
 
-
 #Rota para upload de scripts
+
 @app.route('/uploadscript', methods=['GET', 'POST'])
 @login_required
 def upload_script():
@@ -908,7 +1047,6 @@ def upload_script():
     modelos = cursor.fetchall()
     cursor.close()
 
-    # Adiciona o caminho da pasta associada a cada modelo
     modelos_com_pasta = [
         {"id": modelo[0], "nome": modelo[1], "folder_path": os.path.join(scripts_path, modelo[1])}
         for modelo in modelos
@@ -917,22 +1055,36 @@ def upload_script():
 
     if request.method == 'POST':
         router_model_id = request.form['router_model_id']
-        script_files = request.files.getlist('script_file')  # Recebe múltiplos arquivos
+        script_files = request.files.getlist('script_file')
+        parametros = request.form.getlist('parameters[]')
 
-        # Obter o nome do modelo e verificar a existência da pasta
         modelo_nome = next((modelo['nome'] for modelo in modelos_com_pasta if str(modelo['id']) == router_model_id), None)
-
         if not modelo_nome:
             flash("Erro: A pasta do modelo selecionado não existe.", "danger")
             return redirect(url_for('upload_script'))
 
         upload_folder = os.path.join(scripts_path, modelo_nome)
 
-        # Salva cada arquivo se ele for .py e a pasta do modelo existir
         for script_file in script_files:
-            if script_file.filename.endswith('.py'):  # Verifica se o arquivo é .py
+            if script_file.filename.endswith('.py'):
                 if os.path.isdir(upload_folder):
-                    script_file.save(os.path.join(upload_folder, script_file.filename))
+                    script_file_path = os.path.join(upload_folder, script_file.filename)
+                    script_file.save(script_file_path)
+
+                    cursor = mysql.connection.cursor()
+                    cursor.execute(
+                        "INSERT INTO Scripts (nome, descricao, id_modelo) VALUES (%s, %s, %s)",
+                        (script_file.filename, "Descrição do Script", router_model_id)
+                    )
+                    id_script = cursor.lastrowid
+
+                    for parametro in parametros:
+                        cursor.execute(
+                            "INSERT INTO Parametros_scripts (id_script, nome_parametro) VALUES (%s, %s)",
+                            (id_script, parametro)
+                        )
+                    mysql.connection.commit()
+                    cursor.close()
                 else:
                     flash("Erro: A pasta para o modelo selecionado não está disponível.", "danger")
                     return redirect(url_for('upload_script'))
@@ -940,99 +1092,12 @@ def upload_script():
                 flash(f"O arquivo {script_file.filename} não é um arquivo Python (.py).", "danger")
                 return redirect(url_for('upload_script'))
 
-        flash("Scripts carregados com sucesso!", "success")
+        flash("Scripts e parâmetros carregados com sucesso!", "success")
         return redirect(url_for('upload_script'))
 
     return render_template('upload_script.html', router_models=modelos_com_pasta)
 
 
-@app.route('/test-connection/<int:device_id>', methods=['POST'])
-@login_required
-def test_connection(device_id):
-    # Obtém as informações do dispositivo (IP, modelo, etc.)
-    device_info = get_device_info(device_id)
-    
-    if not device_info:
-        return jsonify({"success": False, "message": "Dispositivo não encontrado."}), 404
-
-    # Identifica o modelo do dispositivo e o caminho do script Testar_conexao.py
-    model_name = device_info['model_name']
-    script_path = f'scripts/{model_name}/Testar_conexao.py'
-
-    # Verifica se o arquivo de script existe
-    if not os.path.isfile(script_path):
-        return jsonify({"success": False, "message": "Script de teste de conexão não encontrado para este modelo."}), 404
-
-    # Carrega o módulo do script de forma dinâmica
-    spec = importlib.util.spec_from_file_location("Testar_conexao", script_path)
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-
-    # Executa a função `main` do script, passando o IP do dispositivo e capturando o resultado
-    try:
-        result = module.main(device_info['ip'])  # Passa o IP do dispositivo para o script
-        return jsonify({"success": True, "message": result})
-    except Exception as e:
-        return jsonify({"success": False, "message": f"Erro ao executar 'Testar_conexao': {str(e)}"}), 500
-    
-    
-
-@app.route('/get-scripts/<model_name>/<int:device_id>', methods=['GET'])
-@login_required
-def get_scripts_with_ip(model_name, device_id):
-    # Caminho da pasta do modelo
-    model_path = os.path.join('scripts', model_name)
-    print(f"Debug: Verificando a existência do caminho {model_path}")
-
-    # Verifica se a pasta do modelo existe
-    if not os.path.isdir(model_path):
-        print("Debug: Pasta do modelo não encontrada")
-        return jsonify({"success": False, "message": "Pasta do modelo não encontrada."}), 404
-
-    # Lista todos os arquivos .py na pasta do modelo
-    scripts = [f for f in os.listdir(model_path) if f.endswith('.py')]
-    print(f"Debug: Scripts encontrados - {scripts}")
-
-    # Obtém o IP do dispositivo do banco de dados
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT ip FROM dispositivos WHERE id_dispositivo = %s", (device_id,))
-    device = cursor.fetchone()
-    cursor.close()
-
-    # Verifica se o dispositivo foi encontrado
-    if not device:
-        print("Debug: Dispositivo não encontrado no banco de dados")
-        return jsonify({"success": False, "message": "Dispositivo não encontrado."}), 404
-
-    # Extrai o IP do dispositivo (primeiro elemento da tupla)
-    device_ip = device[0]
-    print(f"Debug: IP do dispositivo - {device_ip}")
-
-    return jsonify({
-        "scripts": scripts,
-        "ip": device_ip  # Retorna o IP do dispositivo
-    })
-    
-    
-def get_device_info(device_id):
-    cursor = mysql.connection.cursor()
-    cursor.execute("""
-        SELECT d.ip, m.nome AS model_name
-        FROM dispositivos d
-        JOIN modelo m ON d.id_modelo = m.id_modelo
-        WHERE d.id_dispositivo = %s
-    """, (device_id,))
-    device = cursor.fetchone()
-    cursor.close()
-
-    if device:
-        # device[0] é o IP e device[1] é o nome do modelo
-        return {
-            "ip": device[0],
-            "model_name": device[1]
-        }
-    else:
-        return None    
 
 # Tratamento de erro 404
 @app.errorhandler(404)

@@ -200,6 +200,15 @@
                 <!-- Exibição dos arquivos selecionados -->
                 <div id="fileNames" class="file-names"></div>
 
+                <!-- Campos de Parâmetros do Script -->
+                <div class="form-group">
+                    <label for="script_parameters">Parâmetros do Script:</label>
+                    <div id="parameter-fields">
+                        <!-- Campos de parâmetro serão inseridos aqui dinamicamente -->
+                    </div>
+                    <button type="button" class="btn btn-secondary mt-2" onclick="addParameterField()">Adicionar Parâmetro</button>
+                </div>
+
                 <button type="submit" class="btn btn-primary mt-3">Carregar Script</button>
             </form>
 
@@ -224,6 +233,26 @@
             const fileNamesDiv = document.getElementById('fileNames');
             const fileNames = Array.from(input.files).map(file => file.name);
             fileNamesDiv.innerHTML = fileNames.length ? `<strong>Arquivos Selecionados:</strong><br>${fileNames.join('<br>')}` : '';
+        }
+
+        // Função para adicionar campos de parâmetro dinamicamente
+        function addParameterField() {
+            const parameterFields = document.getElementById('parameter-fields');
+            const div = document.createElement('div');
+            div.className = 'input-group mb-2';
+            div.innerHTML = `
+                <input type="text" name="parameters[]" class="form-control" placeholder="Nome do Parâmetro" required>
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-danger" onclick="removeParameterField(this)">Remover</button>
+                </div>
+            `;
+            parameterFields.appendChild(div);
+        }
+
+        // Função para remover campo de parâmetro
+        function removeParameterField(button) {
+            const field = button.parentNode.parentNode;
+            field.parentNode.removeChild(field);
         }
     </script>
 </body>
