@@ -15,6 +15,25 @@ primary key(id_modelo)
 );
 
 
+
+CREATE TABLE IF NOT EXISTS scripts (
+    id_script INT AUTO_INCREMENT,
+    nome VARCHAR(100) NOT NULL,
+    descricao TEXT,
+    id_modelo INT,
+    PRIMARY KEY (id_script),
+    FOREIGN KEY (id_modelo) REFERENCES modelo(id_modelo) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS parametros_scripts (
+    id_parametro INT AUTO_INCREMENT,
+    id_script INT,
+    nome_parametro VARCHAR(100) NOT NULL,
+    PRIMARY KEY (id_parametro),
+    FOREIGN KEY (id_script) REFERENCES Scripts(id_script) ON DELETE CASCADE
+);
+
+
 CREATE TABLE IF NOT EXISTS grupo (
 id_grupo int auto_increment,
 nome varchar(70) not null,
