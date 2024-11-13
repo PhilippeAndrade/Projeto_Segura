@@ -1,111 +1,100 @@
 import time
-import argparse
 from selenium import webdriver
 from webdriver_manager.chrome import ChromeDriverManager
 from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.action_chains import ActionChains
+import argparse
 
 def configurar_rede(ip, senha_admin, nome1_rede, senha1_rede, nome2_rede, senha2_rede):
     url = f"http://{ip}/"
     print(f"Acessando URL do roteador: {url}")
 
-    # Inicia o ChromeDriver
-    try:
-        service = Service(ChromeDriverManager().install())
-        driver = webdriver.Chrome(service=service)
-    except Exception as e:
-        print("Erro ao iniciar o ChromeDriver:", str(e))
-        return
+    # Configura o ChromeDriver usando o webdriver_manager
+    service = Service(ChromeDriverManager().install())
+    driver = webdriver.Chrome(service=service)
 
     try:
         driver.get(url)
-        print("Carregando URL do roteador.")
+        actions = ActionChains(driver)
 
-        # Login no sistema
+        # Campo de senha
         campo_senha = WebDriverWait(driver, 20).until(
             EC.presence_of_element_located((By.XPATH, '//*[@id="local-pwd-tb"]/div[2]/div[1]/span[2]/input[1]'))
         )
         campo_senha.send_keys(senha_admin)
-        print("Senha do roteador inserida.")
+        time.sleep(2)
 
+        # Botão Entrar
         botao_entrar = driver.find_element(By.XPATH, '//*[@id="local-login-button"]/div[2]/div[1]/a')
         botao_entrar.click()
-        print("Botão de login clicado.")
-        time.sleep(5)  # Espera para garantir que o login foi processado
+        time.sleep(5)
 
-        # Navegação para a seção de configurações de rede wireless
-        botao_wireless = WebDriverWait(driver, 20).until(
-            EC.element_to_be_clickable((By.CSS_SELECTOR, "#main-menu > div > div.widget-wrap.navigator-wrap > ul > li:nth-child(3) > a > span.sub-navigator-icon"))
+        # Navegação para "Avançado" e "Configuração Rápida"
+        botao_avancado = driver.find_element(By.XPATH, "//span[@class='sub-navigator-text' and text()='Avançado']")
+        botao_avancado.click()
+        time.sleep(5)
+
+        botao_configuracaorapida = driver.find_element(By.XPATH, "//span[@class='sub-navigator-text' and text()='Configuração Rápida']")
+        botao_configuracaorapida.click()
+        time.sleep(5)
+
+
+        pular = WebDriverWait(driver, 30).until(
+        EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div[4]/div[2]/div[1]/a/span[2]'))
         )
-        botao_wireless.click()
-        time.sleep(5)  # Espera para garantir que a seção wireless seja carregada
+        driver.execute_script("arguments[0].scrollIntoView(true);", pular)
 
-        # Configurar Rede 2.4 GHz
-        ssid_2_4_field = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.ID, "widget--4291c95f-a134-dacf-e9a9-0c5fa42bfd8f"))
+        botao_pular =  WebDriverWait(driver, 20).until(
+        EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[2]/div/div[1]/div[2]/div[2]/div[2]/div[2]/div[4]/div[2]/div[1]/a/span[2]'))
         )
-        ssid_2_4_field.clear()
-        ssid_2_4_field.send_keys(nome1_rede)
-        print("Nome da rede 2.4 GHz configurado.")
+        botao_pular.click()
 
-        senha_2_4_field = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.ID, "widget--07ceabd1-d134-dacf-e9a9-0ccaa8d916c9"))
+        # Configuração da rede 2.4 GHz
+        nome1_elemento = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[3]/div/div[1]/div[2]/div[2]/div[2]/div[3]/div[2]/div[2]/div[2]/div[1]/span[2]/input'))
         )
-        senha_2_4_field.clear()
-        senha_2_4_field.send_keys(senha1_rede)
-        print("Senha da rede 2.4 GHz configurada.")
-
-        # Configurar Rede 5 GHz
-        ssid_5_field = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '#widget--8472554e-6134-dace-15f6-a953446ac868 > div.widget-wrap-outer.text-wrap-outer > div.widget-wrap.text-wrap > span.text-wrap-inner > input[type="text"]'))
-        )
-        ssid_5_field.clear()
-        ssid_5_field.send_keys(nome2_rede)
-        print("Nome da rede 5 GHz configurado.")
-
-        senha_5_field = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '#widget--40969dbd-f134-dace-15f6-a9529940bd39 > div.widget-wrap-outer.text-wrap-outer > div.widget-wrap.text-wrap > span.text-wrap-inner > input[type="text"]'))
-        )
-        senha_5_field.clear()
-        senha_5_field.send_keys(senha2_rede)
-        print("Senha da rede 5 GHz configurada.")
-
-        # Verificar e trocar para iframe, se necessário
-        try:
-            iframe = WebDriverWait(driver, 10).until(EC.presence_of_element_located((By.TAG_NAME, "iframe")))
-            driver.switch_to.frame(iframe)
-            print("Mudou para o iframe.")
-        except Exception:
-            print("Iframe não encontrado ou não necessário.")
-
-        # Localizar e rolar até o botão de Salvar
-        botao_salvar = WebDriverWait(driver, 20).until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, '#save-data > div.widget-wrap-outer.button-wrap-outer > div.widget-wrap.button-wrap > a'))
-        )
+        nome1_elemento.click()
+        nome1_elemento.clear()
+        nome1_elemento.send_keys(nome1_rede)
         
-        # Rolagem para garantir visibilidade do botão
-        driver.execute_script("arguments[0].scrollIntoView(true);", botao_salvar)
-        time.sleep(2)  # Dê um tempo para rolagem
-        
-        # Tentativa de clique com JavaScript, caso o clique padrão não funcione
-        try:
-            driver.execute_script("arguments[0].click();", botao_salvar)
-            print("Tentativa de clique no botão de salvar usando JavaScript.")
-        except Exception as e:
-            print("Erro ao tentar clicar no botão de salvar com JavaScript:", str(e))
+        senha1_elemento = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[3]/div/div[1]/div[2]/div[2]/div[2]/div[3]/div[2]/div[3]/div[2]/div[1]/span[2]/input'))
+        )
+        senha1_elemento.click()
+        senha1_elemento.clear()
+        senha1_elemento.send_keys(senha1_rede)
 
-        # Verificar se há erros no console do navegador
-        logs = driver.get_log("browser")
-        for entry in logs:
-            print("Log do navegador:", entry)
+        # Configuração da rede 5 GHz
+        nome2_elemento = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[3]/div/div[1]/div[2]/div[2]/div[2]/div[4]/div/div[2]/div[2]/div[2]/div[1]/span[2]/input'))
+        )
+        nome2_elemento.click()
+        nome2_elemento.clear()
+        nome2_elemento.send_keys(nome2_rede)
         
-        time.sleep(5)  # Espera para garantir que as configurações sejam aplicadas
-        
-    except Exception as e:
-        print("Erro ao configurar a rede:", str(e))
+        senha2_elemento = WebDriverWait(driver, 20).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[3]/div/div[1]/div[2]/div[2]/div[2]/div[4]/div/div[2]/div[3]/div[2]/div[1]/span[2]/input'))
+        )
+        senha2_elemento.click()
+        senha2_elemento.clear()
+        senha2_elemento.send_keys(senha2_rede)
+
+        # Avançar e finalizar
+        botao_proximo = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[3]/div/div[2]/div[2]/div[2]/div[1]/a'))
+        )
+        botao_proximo.click()
+
+        finalizar = WebDriverWait(driver, 30).until(
+            EC.presence_of_element_located((By.XPATH, '/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div/div[1]/div[5]/div/div/div[2]/div[2]/div[2]/div[4]/div[2]/div[1]/a'))
+        )
+        driver.execute_script("arguments[0].scrollIntoView(true);", finalizar)
+        finalizar.click()
     finally:
+        time.sleep(3)
         driver.quit()
 
 if __name__ == "__main__":
