@@ -8,7 +8,7 @@ import os  # Para manipulação do sistema operacional, como a geração de uma 
 import bcrypt  # Para criptografar e verificar senhas
 from functools import wraps  # Para criar decoradores personalizados
 from cryptography.fernet import Fernet
-import importlib.util
+import logging, sys
 from datetime import timedelta
 import subprocess
 
@@ -42,6 +42,9 @@ mysql = MySQL(app)
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite de 16 MB para upload de arquivos
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(hours=2)  # Sessão de login válida por 2 horas
+
+# Configuração de logs
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
 
 def create_admin_user():
     try:
@@ -904,56 +907,85 @@ def get_scripts(model_name, device_id):
 
 @app.route('/execute-script/<string:model_name>/<int:device_id>/<string:script_name>', methods=['POST'])
 def execute_script(model_name, device_id, script_name):
-    data = request.json
-    ip = data.get("ip")
-    username = data.get("username")
-    senha = data.get("senha")
-    access_type = data.get("access_type")
-    parametros = data.get("parametros", {})
-
-    # Atualize o caminho do script para refletir a estrutura 'scripts/mr30g/Alterar_rede.py'
-    base_dir = os.path.dirname(__file__)
-    script_path = os.path.join(base_dir, 'scripts', model_name, script_name)
-    
-    # Verifique se o caminho do script existe
-    if not os.path.isfile(script_path):
-        return jsonify({"message": "Script não encontrado no caminho especificado.", "path": script_path}), 404
-
-    # Monta o comando do script com o caminho atualizado
-    comando_script = f"python \"{script_path}\" --ip {ip}"
-    
-    if access_type == 'user_password':
-        comando_script += f" --username {username} --password {senha}"
-    elif access_type == 'password_only':
-        comando_script += f" --password {senha}"
-
-    for param, value in parametros.items():
-        comando_script += f" --{param} {value}"
-    
-    # Executa o script
     try:
+        # Obtém os dados da requisição
+        data = request.json
+        if not data:
+            return jsonify({"message": "Requisição deve conter um corpo JSON válido."}), 400
+
+        ip = data.get("ip")
+        if not ip:
+            return jsonify({"message": "O campo 'ip' é obrigatório."}), 400
+
+        # Parâmetros opcionais
+        username = data.get("username")
+        senha = data.get("senha")
+        access_type = data.get("access_type")
+        parametros = data.get("parametros", {})
+
+        # Construção do caminho do script
+        base_dir = os.path.dirname(__file__)
+        script_path = os.path.join(base_dir, 'scripts', model_name, script_name)
+        if not os.path.isfile(script_path):
+            logging.error(f"Script não encontrado: {script_path}")
+            return jsonify({"message": "Script não encontrado.", "path": script_path}), 404
+
+        # Monta o comando base do script
+        comando_script = [sys.executable, script_path, '--ip', ip]
+
+        # Adiciona parâmetros opcionais conforme necessário
+        if access_type == 'user_password':
+            if username and senha:
+                comando_script += ['--username', username, '--password', senha]
+            else:
+                logging.error("Parâmetros 'username' e 'senha' ausentes para 'user_password'.")
+                return jsonify({
+                    "message": "Os campos 'username' e 'senha' são obrigatórios para o tipo de acesso 'user_password'."
+                }), 400
+        elif access_type == 'password_only':
+            if senha:
+                comando_script += ['--password', senha]
+            else:
+                logging.error("Parâmetro 'senha' ausente para 'password_only'.")
+                return jsonify({
+                    "message": "O campo 'senha' é obrigatório para o tipo de acesso 'password_only'."
+                }), 400
+
+        # Adiciona outros parâmetros dinâmicos
+        for param, value in parametros.items():
+            comando_script += [f"--{param}", str(value)]
+
+        # Executa o script e captura stdout/stderr
+        logging.info(f"Executando comando: {' '.join(comando_script)}")
         resultado_execucao = subprocess.run(
-            comando_script, shell=True, capture_output=True, text=True
+            comando_script, capture_output=True, text=True
         )
-        print(comando_script)
+
+        # Verifica a execução do script
         if resultado_execucao.returncode != 0:
+            logging.error(f"Erro na execução do script: {resultado_execucao.stderr.strip()}")
             return jsonify({
-                "message": "Erro ao executar o script.",
-                "output": resultado_execucao.stderr
+                "output": resultado_execucao.stdout.strip(),
+                "error": resultado_execucao.stderr.strip(),
+                "command_executed": ' '.join(comando_script),
+                "message": "Erro na execução do script."
             }), 500
 
+        # Retorna a saída do script em caso de sucesso
         return jsonify({
-            "message": "Script executado com sucesso!",
-            "output": resultado_execucao.stdout,
-            "command_executed": comando_script
+            "output": resultado_execucao.stdout.strip(),
+            "error": None,
+            "command_executed": ' '.join(comando_script),
+            "message": "Script executado com sucesso."
         })
 
     except Exception as e:
-        print("Erro ao tentar executar o script:", str(e))  # Log de exceção
+        logging.exception("Erro inesperado ao tentar executar o script.")
         return jsonify({
-            "message": "Erro ao tentar executar o script.",
+            "message": "Erro inesperado ao tentar executar o script.",
             "error": str(e)
         }), 500
+
 
 
 # Rota para gerenciar dispositivos

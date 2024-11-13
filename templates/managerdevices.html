@@ -8,7 +8,6 @@
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
-        /* Custom Styles */
         body {
             display: flex;
             min-height: 100vh;
@@ -105,6 +104,21 @@
             width: 100%;
             font-size: 0.9rem;
         }
+        .modal-body {
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .output-container {
+            margin-top: 15px;
+        }
+        .output-container pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            color: #212529;
+            overflow-x: auto;
+        }
     </style>
 </head>
 <body>
@@ -113,7 +127,6 @@
 
     <div class="sidebar">
         <h2>Menu</h2>
-        <!-- Sidebar links -->
         <a href="/adddevice"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
         <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
         <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
@@ -164,7 +177,6 @@
         </div>
     </div>
 
-    <!-- Modal para gerenciamento de dispositivos -->
     <div class="modal fade" id="manageModal" tabindex="-1" role="dialog" aria-labelledby="manageModalLabel" aria-hidden="true">
         <div class="modal-dialog" role="document">
             <div class="modal-content">
@@ -176,13 +188,17 @@
                 </div>
                 <div class="modal-body">
                     <p>Selecione uma configuração para o dispositivo:</p>
-                    <ul id="scriptList" class="list-group">
-                    </ul>
-                    <div class="form-check">
+                    <ul id="scriptList" class="list-group"></ul>
+                    <div class="form-check mt-3">
                         <input type="checkbox" class="form-check-input" id="useCredentialsCheckbox">
                         <label class="form-check-label" for="useCredentialsCheckbox">Usar credenciais de usuário e senha</label>
                     </div>
                     <div id="inputFields" class="mt-3"></div>
+                    <div class="output-container" id="scriptOutput" style="display:none;">
+                        <h5>Saída do Script:</h5>
+                        <pre></pre>
+                        <button type="button" id="clearOutputBtn" class="btn btn-secondary mt-2">Limpar Saída</button>
+                    </div>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
@@ -196,12 +212,9 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function() {
-            console.log("Página carregada e pronta");
-
             // Toggle sidebar
             $('#sidebarToggle').click(function() {
                 $('.sidebar').toggleClass('show');
-                $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
             });
 
             // Search filter for device table
@@ -220,14 +233,10 @@
                 $('#executeScriptBtn').data('modelName', modelName);
                 $('#executeScriptBtn').data('deviceId', deviceId);
 
-                console.log("Abrindo modal de gerenciamento para o dispositivo", deviceId);
-
                 $.ajax({
                     url: `/get-scripts/${modelName}/${deviceId}`,
                     method: 'GET',
                     success: function(response) {
-                        console.log("Dados recebidos da API:", response);
-                        
                         if (response.scripts && response.scripts.length > 0) {
                             $('#scriptList').empty();
                             $('#inputFields').empty();
@@ -241,13 +250,7 @@
                             });
                             
                             $('#manageModal').modal('show');
-                        } else {
-                            alert("Nenhum script encontrado para o modelo selecionado.");
                         }
-                    },
-                    error: function(xhr) {
-                        console.error("Erro ao carregar scripts:", xhr.responseText);
-                        alert('Erro ao carregar scripts. Verifique o console para mais detalhes.');
                     }
                 });
             });
@@ -291,11 +294,6 @@
                 const deviceId = $(this).data('deviceId');
                 const scriptName = $(this).data('scriptName');
                 
-                if (!scriptName) {
-                    alert("Selecione um script para executar.");
-                    return;
-                }
-
                 const parametros = {};
                 $('.parametro-input').each(function() {
                     const param = $(this).data('param');
@@ -310,14 +308,11 @@
                     parametros: parametros
                 };
 
-                // Inclui `username` e `senha` se o checkbox for marcado
                 if ($('#useCredentialsCheckbox').is(':checked')) {
                     dadosEnvio.username = $('#scriptList .active').data('username');
                     dadosEnvio.senha = $('#scriptList .active').data('senha');
                     dadosEnvio.access_type = $('#scriptList .active').data('access');
                 }
-
-                console.log("Dados enviados para execução do script:", dadosEnvio);
 
                 $.ajax({
                     url: `/execute-script/${modelName}/${deviceId}/${scriptName}`,
@@ -325,15 +320,20 @@
                     contentType: 'application/json',
                     data: JSON.stringify(dadosEnvio),
                     success: function(response) {
-                        console.log("Resposta da execução do script:", response);
-                        alert(response.message);
-                        $('#manageModal').modal('hide');
+                        $('#scriptOutput').show();
+                        $('#scriptOutput pre').text(response.output || "Nenhuma saída do script.");
                     },
                     error: function(xhr) {
-                        console.error("Erro ao executar script:", xhr.responseText);
-                        alert('Erro ao executar script. Verifique o console para mais detalhes.');
+                        $('#scriptOutput').show();
+                        $('#scriptOutput pre').text(xhr.responseJSON.error || "Erro desconhecido ao executar o script.");
                     }
                 });
+            });
+
+            // Limpar a saída
+            $('#clearOutputBtn').click(function() {
+                $('#scriptOutput').hide();
+                $('#scriptOutput pre').text('');
             });
         });
     </script>
