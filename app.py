@@ -42,6 +42,7 @@ mysql = MySQL(app)
 
 app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # Limite de 16 MB para upload de arquivos
 app.config['REMEMBER_COOKIE_DURATION'] = timedelta(hours=2)  # Sessão de login válida por 2 horas
+app.config['PERMANENT_SESSION_LIFETIME'] = timedelta(minutes=30) 
 
 # Configuração de logs
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s")
@@ -636,20 +637,32 @@ def delete_model():
             if dispositivos_count > 0:
                 return jsonify({"success": False, "message": "Modelo possui dispositivos associados e não pode ser excluído."}), 400
 
-            # Obter o nome do modelo para exclusão da pasta
+            # Obter o nome do modelo para exclusão da pasta e os scripts associados
             cursor.execute("SELECT nome FROM modelo WHERE id_modelo = %s", (modelo_id,))
             modelo_nome = cursor.fetchone()
 
             if modelo_nome:
                 modelo_folder = os.path.join('scripts', modelo_nome[0])
 
-                # Remove a pasta e seus arquivos, se existir
+                # Obter os scripts associados ao modelo
+                cursor.execute("SELECT id_script, nome FROM Scripts WHERE id_modelo = %s", (modelo_id,))
+                scripts = cursor.fetchall()
+
+                # Para cada script, deletar os parâmetros associados e o script
+                for script_id, script_name in scripts:
+                    # Excluir parâmetros associados ao script
+                    cursor.execute("DELETE FROM Parametros_scripts WHERE id_script = %s", (script_id,))
+                    
+                    # Excluir o registro do script no banco de dados
+                    cursor.execute("DELETE FROM Scripts WHERE id_script = %s", (script_id,))
+
+                    # Deletar o arquivo de script do sistema de arquivos, se existir
+                    script_file_path = os.path.join(modelo_folder, script_name)
+                    if os.path.isfile(script_file_path):
+                        os.remove(script_file_path)
+
+                # Excluir a pasta do modelo se ainda existir após a exclusão dos arquivos
                 if os.path.exists(modelo_folder):
-                    for root, dirs, files in os.walk(modelo_folder, topdown=False):
-                        for file in files:
-                            os.remove(os.path.join(root, file))
-                        for dir in dirs:
-                            os.rmdir(os.path.join(root, dir))
                     os.rmdir(modelo_folder)
 
             # Deleta o registro do modelo no banco de dados
@@ -657,7 +670,7 @@ def delete_model():
             mysql.connection.commit()
             cursor.close()
 
-            return jsonify({"success": True, "message": "Modelo excluído com sucesso!"}), 200
+            return jsonify({"success": True, "message": "Modelo e scripts associados excluídos com sucesso!"}), 200
         except Exception as e:
             return jsonify({"success": False, "message": f"Erro ao excluir modelo: {str(e)}"}), 500
 
@@ -1068,7 +1081,7 @@ def upload_script():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     scripts_path = os.path.join(base_dir, 'scripts')
 
-    # Busca os modelos que têm pastas existentes
+    # Busca os modelos e verifica se têm pastas existentes
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT id_modelo, nome FROM modelo")
     modelos = cursor.fetchall()
@@ -1081,16 +1094,17 @@ def upload_script():
     ]
 
     if request.method == 'POST':
-        router_model_id = request.form['router_model_id']
+        router_model_id = request.form.get('router_model_id')  # Verifica se router_model_id é recebido corretamente
         script_files = request.files.getlist('script_file')
         parametros = request.form.getlist('parameters[]')
 
-        modelo_nome = next((modelo['nome'] for modelo in modelos_com_pasta if str(modelo['id']) == router_model_id), None)
-        if not modelo_nome:
+        # Verifica se o modelo existe em modelos_com_pasta
+        modelo_info = next((modelo for modelo in modelos_com_pasta if str(modelo['id']) == router_model_id), None)
+        if not modelo_info:
             flash("Erro: A pasta do modelo selecionado não existe.", "danger")
             return redirect(url_for('upload_script'))
 
-        upload_folder = os.path.join(scripts_path, modelo_nome)
+        upload_folder = modelo_info['folder_path']  # Define o caminho da pasta do modelo
 
         for script_file in script_files:
             if script_file.filename.endswith('.py'):
@@ -1126,8 +1140,9 @@ def upload_script():
 
 
 
+
 # Tratamento de erro 404
-@app.errorhandler(404)
+@app.errorhandler(404)  
 def page_not_found(e):
     return render_template('404.html'), 404
 
@@ -1136,3 +1151,4 @@ if __name__ == '__main__':
     with app.app_context():
         create_admin_user()
     app.run(debug=True, host='0.0.0.0', port=5000)
+#, use_reloader=False

@@ -57,7 +57,8 @@
             z-index: 1100;
             transition: color 0.3s ease;
         }
-        .sidebar.show + #sidebarToggle {
+        /* Ajuste para tornar o ícone branco quando o sidebar está expandido */
+        .sidebar.show #sidebarToggle {
             color: white;
         }
         .content {
@@ -195,7 +196,7 @@
                     </div>
                     <div id="inputFields" class="mt-3"></div>
                     <div class="output-container" id="scriptOutput" style="display:none;">
-                        <h5>Saída do Script:</h5>
+                        <h5>Resultado:</h5>
                         <pre></pre>
                         <button type="button" id="clearOutputBtn" class="btn btn-secondary mt-2">Limpar Saída</button>
                     </div>
@@ -212,9 +213,14 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function() {
-            // Toggle sidebar
+            // Toggle sidebar and change icon color
             $('#sidebarToggle').click(function() {
                 $('.sidebar').toggleClass('show');
+                if ($('.sidebar').hasClass('show')) {
+                    $('#sidebarToggle').css('color', 'white');
+                } else {
+                    $('#sidebarToggle').css('color', '#343a40');
+                }
             });
 
             // Search filter for device table

@@ -57,10 +57,10 @@ if __name__ == "__main__":
     parser.add_argument(
         "--ip",
         required=False,
-        default="192.168.1.1",
-        help="Endereço IP do roteador (padrão: 192.168.1.1)"
     )
     args = parser.parse_args()
+
+    ip_do_roteador = args.ip
 
     # Recebe o resultado da função main
     resultado = main(args.ip)
