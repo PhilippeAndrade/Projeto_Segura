@@ -761,87 +761,81 @@ def delete_group():
 
 @app.route('/managergroups', methods=['GET', 'POST'])
 def manager_groups():
+    cursor = mysql.connection.cursor()
+
     if request.method == 'POST':
-        # Recebe `group_id` e `modelo_id` via JSON no corpo da requisição
         group_id = request.json.get('group_id')
-        modelo_id = request.json.get('modelo_id')
 
-        cursor = mysql.connection.cursor()
-
-        # Define a consulta base
+        # Define a consulta base para dispositivos no grupo selecionado
         query = """
             SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
             FROM dispositivos d
             LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
             LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
-            WHERE 1=1
+            WHERE d.id_grupo = %s
         """
-        params = []
-
-        # Filtra pelo grupo, se especificado
-        if group_id:
-            query += " AND d.id_grupo = %s"
-            params.append(group_id)
-
-        # Filtra pelo modelo, se especificado
-        if modelo_id:
-            query += " AND d.id_modelo = %s"
-            params.append(modelo_id)
-
-        # Executa a consulta com os parâmetros
-        cursor.execute(query, tuple(params))
+        cursor.execute(query, (group_id,))
         dispositivos = cursor.fetchall()
+
+        # Consulta para identificar scripts comuns entre todos os dispositivos do grupo
+        cursor.execute("""
+            SELECT s.nome AS script_nome, COUNT(DISTINCT d.id_modelo) AS modelos_compativeis
+            FROM dispositivos d
+            JOIN scripts s ON d.id_modelo = s.id_modelo
+            WHERE d.id_grupo = %s
+            GROUP BY s.nome
+            HAVING modelos_compativeis = (
+                SELECT COUNT(DISTINCT d2.id_modelo)
+                FROM dispositivos d2
+                WHERE d2.id_grupo = %s
+            );
+        """, (group_id, group_id))
+        scripts_comuns = cursor.fetchall()
+
+        # Para cada script comum, buscar os parâmetros compartilhados
+        scripts_detalhes = []
+        for script_nome, _ in scripts_comuns:
+            cursor.execute("""
+                SELECT p.nome_parametro, GROUP_CONCAT(p.descricao_parametro) as descricao_parametro
+                FROM parametros_scripts p
+                JOIN scripts s ON p.id_script = s.id_script
+                JOIN dispositivos d ON s.id_modelo = d.id_modelo
+                WHERE d.id_grupo = %s AND s.nome = %s
+                GROUP BY p.nome_parametro
+                HAVING COUNT(DISTINCT d.id_modelo) = (
+                    SELECT COUNT(DISTINCT d2.id_modelo)
+                    FROM dispositivos d2
+                    WHERE d2.id_grupo = %s
+                );
+            """, (group_id, script_nome, group_id))
+            parametros = cursor.fetchall()
+            scripts_detalhes.append({
+                "script_nome": script_nome,
+                "parametros": [{"nome": p[0], "descricao": p[1]} for p in parametros]
+            })
+
         cursor.close()
 
-        # Formata os dispositivos para o formato JSON
+        # Formata os dispositivos para o formato JSON com verificação de comprimento de dados
         dispositivos_list = [
             {
                 "id_dispositivo": dispositivo[0],
                 "nome": dispositivo[1],
-                "modelo_nome": dispositivo[2],
-                "grupo_nome": dispositivo[3],
-                "mac_address": dispositivo[4],
-                "ip": dispositivo[5]
+                "modelo_nome": dispositivo[2] if len(dispositivo) > 2 else "N/A",
+                "grupo_nome": dispositivo[3] if len(dispositivo) > 3 else "N/A",
+                "mac_address": dispositivo[4] if len(dispositivo) > 4 else "N/A",
+                "ip": dispositivo[5] if len(dispositivo) > 5 else "N/A"
             }
             for dispositivo in dispositivos
         ]
 
-        # Retorna a lista de dispositivos filtrados como JSON
-        return jsonify({"devices": dispositivos_list})
+        # Retorna a lista de dispositivos e os scripts comuns com parâmetros como JSON
+        return jsonify({"devices": dispositivos_list, "common_scripts": scripts_detalhes})
 
-    # Método GET para carregar a página de gerenciamento com todos os grupos, modelos e dispositivos
-    cursor = mysql.connection.cursor()
-
-    # Carregar todos os grupos
+    # Método GET para carregar a página de gerenciamento com todos os grupos e dispositivos
     cursor.execute("SELECT id_grupo, nome FROM grupo")
     grupos = cursor.fetchall()
 
-    # Carregar todos os modelos
-    cursor.execute("SELECT id_modelo, nome FROM modelo")
-    modelos = cursor.fetchall()
-
-    # Carregar todos os dispositivos
-    cursor.execute("""
-        SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
-        FROM dispositivos d
-        LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
-        LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
-    """)
-    dispositivos = cursor.fetchall()
-    cursor.close()
-
-    # Renderiza o template com todos os dispositivos, grupos e modelos para o carregamento inicial
-    return render_template('managergroups.html', dispositivos=dispositivos, grupos=grupos, modelos=modelos)
-
-
-    # Método GET para carregar a página de gerenciamento de grupos com todos os grupos e dispositivos
-    cursor = mysql.connection.cursor()
-
-    # Carregar todos os grupos
-    cursor.execute("SELECT id_grupo, nome FROM grupo")
-    grupos = cursor.fetchall()
-
-    # Carregar todos os dispositivos
     cursor.execute("""
         SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
         FROM dispositivos d
@@ -853,6 +847,10 @@ def manager_groups():
 
     # Renderiza o template com todos os dispositivos e grupos para o carregamento inicial
     return render_template('managergroups.html', dispositivos=dispositivos, grupos=grupos)
+
+
+
+
 
 @app.route('/get-scripts/<string:model_name>/<int:device_id>', methods=['GET'])
 def get_scripts(model_name, device_id):
