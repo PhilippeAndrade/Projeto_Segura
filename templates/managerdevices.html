@@ -222,7 +222,7 @@
                     $('#sidebarToggle').css('color', '#343a40');
                 }
             });
-
+    
             // Search filter for device table
             $('#searchInput').on('keyup', function() {
                 const value = $(this).val().toLowerCase();
@@ -230,7 +230,7 @@
                     $(this).toggle($(this).text().toLowerCase().indexOf(value) > -1);
                 });
             });
-
+    
             // Abrir modal e carregar scripts para o dispositivo selecionado
             $('.manage-btn').click(function() {
                 const deviceId = $(this).data('id');
@@ -238,7 +238,7 @@
                 
                 $('#executeScriptBtn').data('modelName', modelName);
                 $('#executeScriptBtn').data('deviceId', deviceId);
-
+    
                 $.ajax({
                     url: `/get-scripts/${modelName}/${deviceId}`,
                     method: 'GET',
@@ -249,7 +249,14 @@
                             
                             response.scripts.forEach(script => {
                                 $('#scriptList').append(`
-                                    <li class="list-group-item script-item" data-script="${script.script_name}" data-ip="${response.ip}" data-username="${response.username || ''}" data-senha="${response.senha}" data-access="${response.access_type}" data-parametros='${JSON.stringify(script.parametros)}'>
+                                    <li class="list-group-item script-item" 
+                                        data-script="${script.script_name}" 
+                                        data-descricao="${script.descricao_script}" 
+                                        data-ip="${response.ip}" 
+                                        data-username="${response.username || ''}" 
+                                        data-senha="${response.senha}" 
+                                        data-access="${response.access_type}" 
+                                        data-parametros='${JSON.stringify(script.parametros)}'>
                                         ${script.script_name}
                                     </li>
                                 `);
@@ -260,40 +267,45 @@
                     }
                 });
             });
-
+    
             // Seleção de script no modal e preparação de campos de entrada
             $(document).on('click', '.script-item', function() {
                 $('.script-item').removeClass('active');
                 $(this).addClass('active');
-
+    
                 const scriptName = $(this).data('script');
-                $('#executeScriptBtn').data('scriptName', scriptName); 
-                
+                const descricaoScript = $(this).data('descricao');  // Captura a descrição do script
                 const ip = $(this).data('ip');
                 const username = $(this).data('username');
                 const parametros = $(this).data('parametros');
-
+    
+                $('#executeScriptBtn').data('scriptName', scriptName);
+    
+                // Exibir descrição do script e IP do dispositivo
                 $('#inputFields').empty();
                 $('#inputFields').append(`
+                    <h5>Descrição do Script:</h5>
+                    <p>${descricaoScript}</p>
                     <label>IP do Dispositivo:</label>
                     <input type="text" class="form-control" value="${ip}" readonly>
                 `);
-
+    
                 if (username) {
                     $('#inputFields').append(`
                         <label>Usuário:</label>
                         <input type="text" class="form-control" value="${username}" readonly>
                     `);
                 }
-
+    
+                // Exibir campos para parâmetros com descrições
                 parametros.forEach(param => {
                     $('#inputFields').append(`
-                        <label>${param}</label>
-                        <input type="text" class="form-control parametro-input" data-param="${param}" placeholder="Opcional - deixe em branco se não quiser alterar">
+                        <label>${param.nome_parametro} - ${param.descricao_parametro}</label>
+                        <input type="text" class="form-control parametro-input" data-param="${param.nome_parametro}" placeholder="Caso não deseje alterar: digite a informação atual">
                     `);
                 });
             });
-
+    
             // Executar o script selecionado com parâmetros
             $('#executeScriptBtn').click(function() {
                 const modelName = $(this).data('modelName');
@@ -308,18 +320,18 @@
                         parametros[param] = value;
                     }
                 });
-
+    
                 const dadosEnvio = {
                     ip: $('#scriptList .active').data('ip'),
                     parametros: parametros
                 };
-
+    
                 if ($('#useCredentialsCheckbox').is(':checked')) {
                     dadosEnvio.username = $('#scriptList .active').data('username');
                     dadosEnvio.senha = $('#scriptList .active').data('senha');
                     dadosEnvio.access_type = $('#scriptList .active').data('access');
                 }
-
+    
                 $.ajax({
                     url: `/execute-script/${modelName}/${deviceId}/${scriptName}`,
                     method: 'POST',
@@ -335,7 +347,7 @@
                     }
                 });
             });
-
+    
             // Limpar a saída
             $('#clearOutputBtn').click(function() {
                 $('#scriptOutput').hide();

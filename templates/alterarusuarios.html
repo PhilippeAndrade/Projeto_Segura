@@ -116,9 +116,16 @@
             opacity: 1;
             transition: opacity 2s ease;
         }
+
+        .fade-out {
+            opacity: 0;
+        }
+
     </style>
 </head>
 <body>
+
+    
 
     <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
     <i id="sidebarToggle" class="fas fa-bars"></i>
@@ -137,7 +144,7 @@
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Alterar Senha dos Usuários</h2>
-
+             
             <!-- Tabela com usuários e botão para alterar senha -->
             <table class="table table-bordered">
                 <thead class="thead-dark">
@@ -159,10 +166,19 @@
             </table>
             
             <!-- Mensagem de resultado (sucesso ou erro) -->
-            <div id="resultMessage" class="message-box" style="display: none;"></div>
-
+            <div id="resultMessage" class="message-box" style="display: none;">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    {% for category, message in messages %}
+                        <span class="text-{{ category }}">{{ message }}</span>
+                    {% endfor %}
+                {% endif %}
+                {% endwith %}
+            </div>
+            
             <a href="/createuser" class="btn btn-primary mt-3">Voltar para Criar Usuário</a>
         </div>
+        
     </div>
 
     <!-- Modal de Alteração de Senha -->
@@ -185,7 +201,7 @@
                         <div class="form-group">
                             <label for="confirmar_senha">Confirmar Nova Senha</label>
                             <input type="password" class="form-control" name="confirmar_senha" id="confirmar_senha" required>
-                            <small class="error-message text-danger" style="display: none;">As senhas devem ter pelo menos 6 caracteres e serem iguais.</small>
+                            <small class="error-message text-danger" style="display: none;">As senhas devem ter pelo menos 5 caracteres e serem iguais.</small>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -212,7 +228,7 @@
             const confirmPasswordField = document.getElementById('confirmar_senha');
             const errorMessage = document.querySelector('.error-message');
 
-            if (passwordField.value.length < 6 || passwordField.value !== confirmPasswordField.value) {
+            if (passwordField.value.length < 5 || passwordField.value !== confirmPasswordField.value) {
                 errorMessage.style.display = 'block';
                 return false;
             } else {
@@ -221,29 +237,35 @@
             }
         }
 
-        function showResultMessage(message, isSuccess = true) {
+        document.addEventListener('DOMContentLoaded', () => {
             const resultMessage = document.getElementById('resultMessage');
-            resultMessage.textContent = message;
-            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
-            resultMessage.style.display = 'block';
-            resultMessage.style.opacity = 1;
 
-            setTimeout(() => {
-                resultMessage.style.opacity = 0;
+            // Verifique se a mensagem tem conteúdo (ou seja, se o backend inseriu texto)
+            if (resultMessage && resultMessage.textContent.trim() !== "") {
+                resultMessage.style.display = 'block'; // Exibe a mensagem ao carregar
+
+                // Inicia o fade-out após 2 segundos
                 setTimeout(() => {
-                    resultMessage.style.display = 'none';
+                    resultMessage.classList.add('fade-out'); // Adiciona a classe para iniciar a transição
                 }, 2000);
-            }, 2000);
-        }
 
-        // Exemplo de chamada para teste:
-        // showResultMessage("Senha alterada com sucesso!", true);
+                // Após 4 segundos, esconde completamente a mensagem e remove a classe fade-out
+                setTimeout(() => {
+                    resultMessage.style.display = 'none'; // Esconde a mensagem
+                    resultMessage.classList.remove('fade-out'); // Remove fade-out para futuras mensagens
+                }, 4000);
+            }
+        });
+
+         //Exemplo de chamada para teste:
+        //showResultMessage("Senha alterada com sucesso!", true);
 
         // Botão de toggle para a sidebar
         $('#sidebarToggle').click(function() {
             $('.sidebar').toggleClass('show');
             $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
         });
+        
     </script>
 </body>
 </html>

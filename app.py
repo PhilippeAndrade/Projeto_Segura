@@ -536,38 +536,43 @@ def logout():
     flash('Você foi deslogado com sucesso!', 'success')  # Exibe mensagem de sucesso
     return redirect(url_for('login'))  # Redireciona para a página de login
 
+
 # Rota para alterar usuários, acessível apenas para usuários logados
 @app.route('/alterarusuarios', methods=['GET', 'POST'])
 @login_required
 def alterar_usuarios():
+    # Conectar ao banco de dados e obter todos os usuários
     cursor = mysql.connection.cursor()
     cursor.execute("SELECT * FROM usuarios")  # Seleciona todos os usuários
     usuarios = cursor.fetchall()  # Retorna todos os usuários
     cursor.close()
 
-    if request.method == 'POST':  # Se a requisição é POST
-        user_id = request.form.get('user_id')  # Obtém o ID do usuário
+    if request.method == 'POST':  # Verifica se a requisição é POST para alterar senha
+        user_id = request.form.get('user_id')  # Obtém o ID do usuário do formulário
         nova_senha = request.form.get('nova_senha')  # Obtém a nova senha
         confirmar_senha = request.form.get('confirmar_senha')  # Obtém a confirmação da senha
 
-        # Verifica se as senhas são iguais e possuem comprimento mínimo
+        # Verifica se as senhas coincidem e têm pelo menos 6 caracteres
         if nova_senha != confirmar_senha:
-            flash("As senhas não coincidem. Por favor, tente novamente.", "danger")
-        elif len(nova_senha) < 6:
-            flash("A senha deve ter pelo menos 6 caracteres.", "danger")
+            flash("As senhas não coincidem. Por favor, tente novamente.", "danger alterar_usuario")
+        elif len(nova_senha) < 5:
+            flash("A senha deve ter pelo menos 5 caracteres.", "danger alterar_usuario")
         else:
             try:
-                nova_senha_hashed = hash_senha(nova_senha)  # Gera o hash da nova senha
+                # Gera o hash da nova senha com bcrypt para salvar no banco de dados
+                nova_senha_hashed = bcrypt.hashpw(nova_senha.encode('utf-8'), bcrypt.gensalt())
                 cursor = mysql.connection.cursor()
                 cursor.execute("UPDATE usuarios SET password = %s WHERE id = %s", (nova_senha_hashed, user_id))
                 mysql.connection.commit()
                 cursor.close()
-                
-                flash("Senha do usuário alterada com sucesso!", "success")
-            except Exception as e:
-                flash(f"Erro ao alterar senha: {str(e)}", "danger")
 
-    return render_template('alterarusuarios.html', usuarios=usuarios)  # Renderiza a página de alteração
+                # Mensagem de sucesso
+                flash("Senha alterada com sucesso!", "success alterar_usuario")
+                return redirect(url_for('alterar_usuarios'))
+            except Exception as e:
+                flash(f"Erro ao alterar senha: {str(e)}", "danger alterar_usuario")
+
+    return render_template('alterarusuarios.html', usuarios=usuarios)
 
 # Rota para visualizar usuários
 @app.route('/visualizarusuarios')
@@ -854,9 +859,9 @@ def get_scripts(model_name, device_id):
     cursor = mysql.connection.cursor()
 
     try:
-        # Carregar os scripts associados ao modelo
+        # Carregar os scripts associados ao modelo, incluindo a descrição do script
         cursor.execute("""
-            SELECT s.id_script, s.nome 
+            SELECT s.id_script, s.nome, s.descricao 
             FROM Scripts s
             JOIN modelo m ON s.id_modelo = m.id_modelo
             WHERE m.nome = %s
@@ -882,21 +887,29 @@ def get_scripts(model_name, device_id):
         # Descriptografar a senha
         senha = cipher_suite.decrypt(password_criptografada.encode()).decode()
 
-        # Preparar lista de scripts com parâmetros
+        # Preparar lista de scripts com parâmetros e suas descrições
         scripts_list = []
-        for script_id, script_name in scripts:
-            # Carregar parâmetros associados ao script
+        for script_id, script_name, descricao_script in scripts:
+            # Carregar parâmetros associados ao script, incluindo a descrição de cada parâmetro
             cursor.execute("""
-                SELECT nome_parametro 
+                SELECT nome_parametro, descricao_parametro 
                 FROM Parametros_scripts 
                 WHERE id_script = %s
             """, (script_id,))
             parametros = cursor.fetchall()
             
+            # Adicionar o script com seus parâmetros e descrições
             scripts_list.append({
                 "script_id": script_id,
                 "script_name": script_name,
-                "parametros": [param[0] for param in parametros]
+                "descricao_script": descricao_script,  # Adiciona a descrição do script
+                "parametros": [
+                    {
+                        "nome_parametro": param[0],
+                        "descricao_parametro": param[1]
+                    }
+                    for param in parametros
+                ]
             })
 
         # Estrutura de dados a ser enviada ao cliente
@@ -1080,60 +1093,85 @@ def manager_devices():
 def upload_script():
     base_dir = os.path.dirname(os.path.abspath(__file__))
     scripts_path = os.path.join(base_dir, 'scripts')
+    os.makedirs(scripts_path, exist_ok=True)  # Certifique-se de que a pasta 'scripts' existe
 
     # Busca os modelos e verifica se têm pastas existentes
     cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id_modelo, nome FROM modelo")
-    modelos = cursor.fetchall()
-    cursor.close()
+    try:
+        cursor.execute("SELECT id_modelo, nome FROM modelo")
+        modelos = cursor.fetchall()
+    finally:
+        cursor.close()
 
     modelos_com_pasta = [
         {"id": modelo[0], "nome": modelo[1], "folder_path": os.path.join(scripts_path, modelo[1])}
         for modelo in modelos
-        if os.path.exists(os.path.join(scripts_path, modelo[1]))
     ]
 
     if request.method == 'POST':
-        router_model_id = request.form.get('router_model_id')  # Verifica se router_model_id é recebido corretamente
+        router_model_id = request.form.get('router_model_id')
         script_files = request.files.getlist('script_file')
         parametros = request.form.getlist('parameters[]')
+        descricoes = request.form.getlist('descriptions[]')  # Captura as descrições dos parâmetros
+        script_description = request.form.get('script_description')  # Captura a descrição do script
 
-        # Verifica se o modelo existe em modelos_com_pasta
+        # Verifica se o modelo existe em modelos_com_pasta e cria a pasta se necessário
         modelo_info = next((modelo for modelo in modelos_com_pasta if str(modelo['id']) == router_model_id), None)
         if not modelo_info:
-            flash("Erro: A pasta do modelo selecionado não existe.", "danger")
+            flash("Erro: Modelo não encontrado.", "danger upload_script")
             return redirect(url_for('upload_script'))
 
-        upload_folder = modelo_info['folder_path']  # Define o caminho da pasta do modelo
+        upload_folder = modelo_info['folder_path']
+        os.makedirs(upload_folder, exist_ok=True)
 
+        # Processa cada arquivo de script
         for script_file in script_files:
-            if script_file.filename.endswith('.py'):
-                if os.path.isdir(upload_folder):
-                    script_file_path = os.path.join(upload_folder, script_file.filename)
-                    script_file.save(script_file_path)
+            if not script_file.filename.endswith('.py'):
+                flash(f"O arquivo {script_file.filename} não é um arquivo Python (.py).", "danger upload_script")
+                continue
 
-                    cursor = mysql.connection.cursor()
+            cursor = mysql.connection.cursor()
+            try:
+                cursor.execute(
+                    "SELECT COUNT(*) FROM Scripts WHERE nome = %s AND id_modelo = %s",
+                    (script_file.filename, router_model_id)
+                )
+                file_exists = cursor.fetchone()[0] > 0
+
+                if file_exists:
+                    flash(f"O arquivo {script_file.filename} já existe para este modelo.", "warning upload_script")
+                    continue
+
+                script_file_path = os.path.join(upload_folder, script_file.filename)
+                if os.path.exists(script_file_path):
+                    flash(f"O arquivo {script_file.filename} já existe na pasta e será sobrescrito.", "info upload_script")
+
+                script_file.save(script_file_path)
+
+                # Insere informações do script no banco de dados, incluindo a descrição
+                cursor.execute(
+                    "INSERT INTO Scripts (nome, descricao, id_modelo) VALUES (%s, %s, %s)",
+                    (script_file.filename, script_description, router_model_id)
+                )
+                id_script = cursor.lastrowid
+
+                # Adiciona os parâmetros e suas descrições relacionadas ao script
+                for parametro, descricao in zip(parametros, descricoes):
                     cursor.execute(
-                        "INSERT INTO Scripts (nome, descricao, id_modelo) VALUES (%s, %s, %s)",
-                        (script_file.filename, "Descrição do Script", router_model_id)
+                        "INSERT INTO Parametros_scripts (id_script, nome_parametro, descricao_parametro) VALUES (%s, %s, %s)",
+                        (id_script, parametro, descricao)
                     )
-                    id_script = cursor.lastrowid
+                mysql.connection.commit()
 
-                    for parametro in parametros:
-                        cursor.execute(
-                            "INSERT INTO Parametros_scripts (id_script, nome_parametro) VALUES (%s, %s)",
-                            (id_script, parametro)
-                        )
-                    mysql.connection.commit()
-                    cursor.close()
-                else:
-                    flash("Erro: A pasta para o modelo selecionado não está disponível.", "danger")
-                    return redirect(url_for('upload_script'))
-            else:
-                flash(f"O arquivo {script_file.filename} não é um arquivo Python (.py).", "danger")
+            except Exception as e:
+                mysql.connection.rollback()
+                flash(f"Erro ao carregar o script {script_file.filename}: {e}", "danger upload_script")
                 return redirect(url_for('upload_script'))
 
-        flash("Scripts e parâmetros carregados com sucesso!", "success")
+            finally:
+                cursor.close()
+
+        flash("Scripts e parâmetros carregados com sucesso!", "success upload_script")
         return redirect(url_for('upload_script'))
 
     return render_template('upload_script.html', router_models=modelos_com_pasta)
