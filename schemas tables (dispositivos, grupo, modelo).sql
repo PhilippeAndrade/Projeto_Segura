@@ -30,6 +30,7 @@ CREATE TABLE IF NOT EXISTS parametros_scripts (
     id_script INT,
     nome_parametro VARCHAR(100) NOT NULL,
     PRIMARY KEY (id_parametro),
+    descricao_parametro TEXT;
     FOREIGN KEY (id_script) REFERENCES Scripts(id_script) ON DELETE CASCADE
 );
 
