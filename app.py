@@ -34,7 +34,7 @@ def decrypt_password(encrypted_password):
 # Configuração para conexão com o banco de dados MySQL
 app.config['MYSQL_HOST'] = "localhost"
 app.config['MYSQL_USER'] = "root"
-app.config['MYSQL_PASSWORD'] = "admin"
+app.config['MYSQL_PASSWORD'] = "root"
 app.config['MYSQL_DB'] = "segura"
 
 # Inicializa a conexão com o MySQL
@@ -760,77 +760,49 @@ def delete_group():
 
 
 @app.route('/managergroups', methods=['GET', 'POST'])
+@login_required
 def manager_groups():
     cursor = mysql.connection.cursor()
 
     if request.method == 'POST':
         group_id = request.json.get('group_id')
 
-        # Define a consulta base para dispositivos no grupo selecionado
-        query = """
-            SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
-            FROM dispositivos d
-            LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
-            LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
-            WHERE d.id_grupo = %s
-        """
-        cursor.execute(query, (group_id,))
+        # Define a consulta base para dispositivos
+        if group_id:  # Se um grupo foi selecionado, filtra por ele
+            query = """
+                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+                FROM dispositivos d
+                LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+                LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+                WHERE d.id_grupo = %s
+            """
+            cursor.execute(query, (group_id,))
+        else:  # Se nenhum grupo foi selecionado, traga todos os dispositivos
+            query = """
+                SELECT d.id_dispositivo, d.nome, m.nome AS modelo_nome, g.nome AS grupo_nome, d.mac_address, d.ip 
+                FROM dispositivos d
+                LEFT JOIN modelo m ON d.id_modelo = m.id_modelo
+                LEFT JOIN grupo g ON d.id_grupo = g.id_grupo
+            """
+            cursor.execute(query)
+
         dispositivos = cursor.fetchall()
-
-        # Consulta para identificar scripts comuns entre todos os dispositivos do grupo
-        cursor.execute("""
-            SELECT s.nome AS script_nome, COUNT(DISTINCT d.id_modelo) AS modelos_compativeis
-            FROM dispositivos d
-            JOIN scripts s ON d.id_modelo = s.id_modelo
-            WHERE d.id_grupo = %s
-            GROUP BY s.nome
-            HAVING modelos_compativeis = (
-                SELECT COUNT(DISTINCT d2.id_modelo)
-                FROM dispositivos d2
-                WHERE d2.id_grupo = %s
-            );
-        """, (group_id, group_id))
-        scripts_comuns = cursor.fetchall()
-
-        # Para cada script comum, buscar os parâmetros compartilhados
-        scripts_detalhes = []
-        for script_nome, _ in scripts_comuns:
-            cursor.execute("""
-                SELECT p.nome_parametro, GROUP_CONCAT(p.descricao_parametro) as descricao_parametro
-                FROM parametros_scripts p
-                JOIN scripts s ON p.id_script = s.id_script
-                JOIN dispositivos d ON s.id_modelo = d.id_modelo
-                WHERE d.id_grupo = %s AND s.nome = %s
-                GROUP BY p.nome_parametro
-                HAVING COUNT(DISTINCT d.id_modelo) = (
-                    SELECT COUNT(DISTINCT d2.id_modelo)
-                    FROM dispositivos d2
-                    WHERE d2.id_grupo = %s
-                );
-            """, (group_id, script_nome, group_id))
-            parametros = cursor.fetchall()
-            scripts_detalhes.append({
-                "script_nome": script_nome,
-                "parametros": [{"nome": p[0], "descricao": p[1]} for p in parametros]
-            })
-
         cursor.close()
 
-        # Formata os dispositivos para o formato JSON com verificação de comprimento de dados
+        # Formata os dispositivos para o formato JSON
         dispositivos_list = [
             {
                 "id_dispositivo": dispositivo[0],
                 "nome": dispositivo[1],
-                "modelo_nome": dispositivo[2] if len(dispositivo) > 2 else "N/A",
-                "grupo_nome": dispositivo[3] if len(dispositivo) > 3 else "N/A",
-                "mac_address": dispositivo[4] if len(dispositivo) > 4 else "N/A",
-                "ip": dispositivo[5] if len(dispositivo) > 5 else "N/A"
+                "modelo_nome": dispositivo[2] if dispositivo[2] else "N/A",
+                "grupo_nome": dispositivo[3] if dispositivo[3] else "N/A",
+                "mac_address": dispositivo[4],
+                "ip": dispositivo[5]
             }
             for dispositivo in dispositivos
         ]
 
-        # Retorna a lista de dispositivos e os scripts comuns com parâmetros como JSON
-        return jsonify({"devices": dispositivos_list, "common_scripts": scripts_detalhes})
+        return jsonify({"devices": dispositivos_list})
 
     # Método GET para carregar a página de gerenciamento com todos os grupos e dispositivos
     cursor.execute("SELECT id_grupo, nome FROM grupo")
@@ -847,6 +819,7 @@ def manager_groups():
 
     # Renderiza o template com todos os dispositivos e grupos para o carregamento inicial
     return render_template('managergroups.html', dispositivos=dispositivos, grupos=grupos)
+
 
 
 
@@ -1014,6 +987,7 @@ def execute_script(model_name, device_id, script_name):
 
 # Rota para gerenciar dispositivos
 @app.route('/managerdevices', methods=['GET', 'POST'])
+
 def manager_devices():
     if request.method == 'POST':
         # Recebe o `group_id` e `nome_dispositivo` via JSON no corpo da requisição
@@ -1175,6 +1149,147 @@ def upload_script():
     return render_template('upload_script.html', router_models=modelos_com_pasta)
 
 
+@app.route('/execute-group-scripts', methods=['POST'])
+@login_required
+def execute_group_scripts():
+    """
+    Rota para executar scripts selecionados para dispositivos de diferentes modelos em um grupo.
+    """
+    try:
+        data = request.json
+        group_data = data.get('groupData', [])
+
+        if not group_data:
+            return jsonify({"error": "Nenhum dado fornecido para execução."}), 400
+
+        results = []
+
+        for group in group_data:
+            model_id = group.get("modelId")
+            script_id = group.get("scriptId")
+            use_credentials = group.get("useCredentials", False)
+            parameters = group.get("parameters", {})
+
+            # Obter detalhes do script
+            cursor = mysql.connection.cursor()
+            cursor.execute("""
+                SELECT s.nome, m.nome AS modelo_nome
+                FROM Scripts s
+                JOIN modelo m ON s.id_modelo = m.id_modelo
+                WHERE s.id_script = %s
+            """, (script_id,))
+            script = cursor.fetchone()
+
+            if not script:
+                results.append({"modelId": model_id, "error": "Script não encontrado."})
+                continue
+
+            script_name, model_name = script
+
+            # Obter dispositivos associados ao modelo
+            cursor.execute("""
+                SELECT d.ip, d.username, d.password, d.access_type
+                FROM dispositivos d
+                WHERE d.id_modelo = %s
+            """, (model_id,))
+            dispositivos = cursor.fetchall()
+            cursor.close()
+
+            # Executar script para cada dispositivo
+            for dispositivo in dispositivos:
+                ip, username, encrypted_password, access_type = dispositivo
+                password = decrypt_password(encrypted_password) if encrypted_password else None
+
+                # Construir comando do script
+                base_dir = os.path.dirname(__file__)
+                script_path = os.path.join(base_dir, 'scripts', model_name, script_name)
+                command = [sys.executable, script_path, '--ip', ip]
+
+                if use_credentials and access_type == 'user_password':
+                    command += ['--username', username, '--password', password]
+
+                for param, value in parameters.items():
+                    command += [f"--{param}", str(value)]
+
+                # Executar script
+                result = subprocess.run(command, capture_output=True, text=True)
+
+                if result.returncode == 0:
+                    results.append({
+                        "modelId": model_id,
+                        "deviceIp": ip,
+                        "output": result.stdout.strip()
+                    })
+                else:
+                    results.append({
+                        "modelId": model_id,
+                        "deviceIp": ip,
+                        "error": result.stderr.strip()
+                    })
+
+        return jsonify({"results": results})
+
+    except Exception as e:
+        return jsonify({"error": f"Erro ao executar scripts: {str(e)}"}), 500
+
+
+@app.route('/get-group-scripts/<string:group_name>', methods=['GET'])
+@login_required
+def get_group_scripts(group_name):
+    """
+    Rota para obter scripts e dispositivos relacionados a um grupo.
+    """
+    try:
+        cursor = mysql.connection.cursor()
+
+        cursor.execute("""
+            SELECT d.id_dispositivo, d.nome, m.id_modelo, m.nome AS modelo_nome, d.ip
+            FROM dispositivos d
+            JOIN modelo m ON d.id_modelo = m.id_modelo
+            JOIN grupo g ON d.id_grupo = g.id_grupo
+            WHERE g.nome = %s
+        """, (group_name,))
+        dispositivos = cursor.fetchall()
+
+        if not dispositivos:
+            return jsonify({"error": "Nenhum dispositivo encontrado para este grupo."}), 404
+
+        modelos = {}
+        for dispositivo in dispositivos:
+            dispositivo_id, dispositivo_nome, modelo_id, modelo_nome, ip = dispositivo
+            if modelo_id not in modelos:
+                modelos[modelo_id] = {
+                    "id": modelo_id,
+                    "name": modelo_nome,
+                    "devices": [],
+                    "scripts": []
+                }
+            modelos[modelo_id]["devices"].append(f"{dispositivo_nome} ({ip})")
+
+        for modelo_id in modelos:
+            cursor.execute("""
+                SELECT s.id_script, s.nome, p.nome_parametro, p.descricao_parametro
+                FROM Scripts s
+                LEFT JOIN Parametros_scripts p ON s.id_script = p.id_script
+                WHERE s.id_modelo = %s
+            """, (modelo_id,))
+            scripts = cursor.fetchall()
+            script_data = {}
+            for script_id, script_name, param_name, param_desc in scripts:
+                if script_id not in script_data:
+                    script_data[script_id] = {"id": script_id, "name": script_name, "parameters": []}
+                if param_name:
+                    script_data[script_id]["parameters"].append({
+                        "name": param_name,
+                        "description": param_desc
+                    })
+            modelos[modelo_id]["scripts"] = list(script_data.values())
+
+        cursor.close()
+        return jsonify({"models": list(modelos.values())})
+
+    except Exception as e:
+        return jsonify({"error": f"Erro ao carregar dados do grupo: {str(e)}"}), 500
 
 
 # Tratamento de erro 404

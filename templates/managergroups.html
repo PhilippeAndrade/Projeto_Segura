@@ -1,7 +1,9 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cadastrar Dispositivo</title>
+    <title>Gerenciar Grupos</title>
     <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
@@ -40,8 +42,7 @@
             transition: background 0.3s ease;
             text-decoration: none;
         }
-        .sidebar a:hover,
-        .sidebar a.active {
+        .sidebar a:hover, .sidebar a.active {
             background-color: #495057;
             color: #ffc107;
         }
@@ -104,16 +105,12 @@
             background-color: #0056b3;
             border-color: #0056b3;
         }
-        .error-message {
-            color: red;
-            font-size: 0.9rem;
-            display: none;
+        .modal-body {
+            max-height: 400px;
+            overflow-y: auto;
         }
-        #resultMessage {
-            margin-top: 15px;
-            font-size: 0.9rem;
-            opacity: 1;
-            transition: opacity 2s ease;
+        .parameters input {
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -135,31 +132,24 @@
 
     <div class="content">
         <div class="form-container">
-            <h2 class="text-center mb-4">Lista de Dispositivos por Grupo</h2>
-            <div class="form-group text-center mb-4">
-                <div style="display: flex; justify-content: center; gap: 20px;">
-                    <div style="min-width: 200px;">
-                        <label for="groupFilter">Filtrar por Grupo:</label>
-                        <select id="groupFilter" class="form-control">
-                            <option value="">Todos os Grupos</option>
-                            {% for grupo in grupos %}
-                                <option value="{{ grupo[0] }}">{{ grupo[1] }}</option>
-                            {% endfor %}
-                        </select>
-                    </div>
-                    
-                </div>
+            <h2 class="text-center mb-4">Gerenciar Grupos</h2>
+            <div class="form-group">
+                <label for="groupFilter">Selecionar Grupo:</label>
+                <select id="groupFilter" class="form-control">
+                    <option value="">Todos os Grupos</option>
+                    {% for grupo in grupos %}
+                        <option value="{{ grupo[0] }}">{{ grupo[1] }}</option>
+                    {% endfor %}
+                </select>
             </div>
 
-            <div class="table-container">
+            <div class="table-container mt-4">
                 <table class="table table-bordered">
                     <thead class="thead-dark">
                         <tr>
-                            <th>Selecionar</th>
                             <th>Nome</th>
                             <th>Modelo</th>
                             <th>Grupo</th>
-                            <th>MAC Address</th>
                             <th>IP</th>
                             <th>Ação</th>
                         </tr>
@@ -167,111 +157,169 @@
                     <tbody id="deviceTableBody">
                         {% for dispositivo in dispositivos %}
                         <tr>
-                            <td><input type="checkbox" class="select-device" value="{{ dispositivo[0] }}"></td>
                             <td>{{ dispositivo[1] }}</td>
-                            <td>{{ dispositivo[2] or "N/A" }}</td>
-                            <td>{{ dispositivo[3] or "N/A" }}</td>
-                            <td>{{ dispositivo[4] }}</td>
+                            <td>{{ dispositivo[2] }}</td>
+                            <td>{{ dispositivo[3] }}</td>
                             <td>{{ dispositivo[5] }}</td>
-                            <td><a href="{{ url_for('manager_devices', dispositivo_id=dispositivo[0]) }}" class="btn btn-warning">Gerenciar</a></td>
+                            <td>
+                                <button class="btn btn-warning manage-group" data-group="{{ dispositivo[3] }}">Gerenciar</button>
+                            </td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
+        </div>
+    </div>
 
-            <div id="scriptParamsContainer" style="display:none; margin-top:20px;">
-                <h4>Scripts Comuns Disponíveis:</h4>
-                <div id="scriptsList"></div>
-            </div>
-
-            <div class="text-center mt-3">
-                <button class="btn btn-primary" id="manageSelected" style="display: none;">Gerenciar Selecionados</button>
+    <!-- Modal -->
+    <div class="modal fade" id="manageModal" tabindex="-1" role="dialog" aria-labelledby="manageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="manageModalLabel">Gerenciar Configurações do Grupo</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalContent"></div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
+                    <button type="button" id="executeGroupScripts" class="btn btn-primary">Executar</button>
+                </div>
             </div>
         </div>
     </div>
 
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        $(document).ready(function() {
+        $(document).ready(function () {
             // Sidebar toggle
-            $('#sidebarToggle').click(function() {
+            $('#sidebarToggle').click(function () {
                 $('.sidebar').toggleClass('show');
                 $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
             });
-    
-            // Seletores de elementos HTML
-            const groupFilterSelect = document.getElementById("groupFilter");
-            const deviceTableBody = document.getElementById("deviceTableBody");
-            const scriptParamsContainer = document.getElementById("scriptParamsContainer");
-            const scriptsList = document.getElementById("scriptsList");
-    
-            // Função para filtrar dispositivos por grupo
-            function filterDevices() {
-                const groupId = groupFilterSelect.value;
-    
+
+            // Filtrar dispositivos por grupo
+            $('#groupFilter').change(function () {
+                const groupId = $(this).val();
                 $.ajax({
-                    url: "/managergroups",
-                    type: "POST",
-                    contentType: "application/json",
-                    data: JSON.stringify({ group_id: groupId }), // Removed modelo_id
-                    success: function(response) {
-                        deviceTableBody.innerHTML = "";  // Limpa a tabela
-    
-                        // Verifica se há dispositivos na resposta
-                        if (response.devices && response.devices.length > 0) {
-                            response.devices.forEach(device => {
-                                const row = document.createElement("tr");
-                                row.innerHTML = `
-                                    <td><input type="checkbox" class="select-device" value="${device.id_dispositivo}"></td>
+                    url: '/managergroups',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ group_id: groupId }),
+                    success: function (response) {
+                        const tableBody = $('#deviceTableBody');
+                        tableBody.empty();
+                        response.devices.forEach(device => {
+                            tableBody.append(`
+                                <tr>
                                     <td>${device.nome}</td>
-                                    <td>${device.modelo_nome || "N/A"}</td>
-                                    <td>${device.grupo_nome || "N/A"}</td>
-                                    <td>${device.mac_address}</td>
+                                    <td>${device.modelo_nome}</td>
+                                    <td>${device.grupo_nome}</td>
                                     <td>${device.ip}</td>
-                                    <td><a href="/managerdevices/${device.id_dispositivo}" class="btn btn-warning">Gerenciar</a></td>
-                                `;
-                                deviceTableBody.appendChild(row);
-                            });
-                        } else {
-                            const noDevicesRow = document.createElement("tr");
-                            noDevicesRow.innerHTML = `<td colspan="7" class="text-center">Nenhum dispositivo encontrado</td>`;
-                            deviceTableBody.appendChild(noDevicesRow);
-                        }
-    
-                        scriptsList.innerHTML = "";
-                        if (response.common_scripts && response.common_scripts.length > 0) {
-                            response.common_scripts.forEach(script => {
-                                const scriptDiv = document.createElement("div");
-                                scriptDiv.classList.add("script-item");
-                                scriptDiv.innerHTML = `<h5>${script.script_nome}</h5>`;
-    
-                                script.parametros.forEach(param => {
-                                    const paramDiv = document.createElement("div");
-                                    paramDiv.innerHTML = `
-                                        <label>${param.nome}:</label>
-                                        <input type="text" name="${param.nome}" class="form-control mb-2">
-                                    `;
-                                    scriptDiv.appendChild(paramDiv);
-                                });
-                                scriptsList.appendChild(scriptDiv);
-                            });
-                            scriptParamsContainer.style.display = "block";
-                        } else {
-                            scriptParamsContainer.style.display = "none";
-                        }
+                                    <td>
+                                        <button class="btn btn-warning manage-group" data-group="${device.grupo_nome}">Gerenciar</button>
+                                    </td>
+                                </tr>
+                            `);
+                        });
                     },
-                    error: function() {
-                        alert("Erro ao filtrar dispositivos. Tente novamente.");
+                    error: function () {
+                        alert('Erro ao carregar dispositivos do grupo.');
                     }
                 });
-            }
-    
-            groupFilterSelect.addEventListener("change", filterDevices);
-    
-            filterDevices();
+            });
+
+            // Abrir modal para gerenciar grupo
+            $(document).on('click', '.manage-group', function () {
+                const groupName = $(this).data('group');
+                $.ajax({
+                    url: `/get-group-scripts/${groupName}`,
+                    method: 'GET',
+                    success: function (response) {
+                        const modalContent = $('#modalContent');
+                        modalContent.empty();
+                        response.models.forEach(model => {
+                            modalContent.append(`
+                                <div class="model-section">
+                                    <h5>Modelo: ${model.name}</h5>
+                                    <p>Dispositivos: ${model.devices.join(', ')}</p>
+                                    <label for="scriptSelect${model.id}">Selecionar Script:</label>
+                                    <select id="scriptSelect${model.id}" class="form-control script-select" data-model="${model.id}">
+                                        ${model.scripts.map(script => `<option value="${script.id}">${script.name}</option>`).join('')}
+                                    </select>
+                                    <div class="form-check mt-3">
+                                        <input type="checkbox" class="form-check-input use-credentials" id="useCredentials${model.id}">
+                                        <label class="form-check-label" for="useCredentials${model.id}">Usar credenciais de usuário e senha</label>
+                                    </div>
+                                    <div id="parameters${model.id}" class="parameters mt-3"></div>
+                                </div>
+                            `);
+                        });
+                        $('#manageModal').modal('show');
+                    },
+                    error: function () {
+                        alert('Erro ao carregar dados do grupo.');
+                    }
+                });
+            });
+
+            // Atualizar parâmetros ao selecionar script
+            $(document).on('change', '.script-select', function () {
+                const modelId = $(this).data('model');
+                const scriptId = $(this).val();
+                const parametersDiv = $(`#parameters${modelId}`);
+                parametersDiv.empty();
+
+                const selectedScript = response.models.find(model => model.id === modelId)
+                    .scripts.find(script => script.id == scriptId);
+
+                selectedScript.parameters.forEach(param => {
+                    parametersDiv.append(`
+                        <label>${param.description}:</label>
+                        <input type="text" class="form-control mb-2" data-param="${param.name}">
+                    `);
+                });
+            });
+            
+
+            // Executar scripts do grupo
+            $('#executeGroupScripts').click(function () {
+                const groupData = [];
+                $('.model-section').each(function () {
+                    const modelId = $(this).find('.script-select').data('model');
+                    const scriptId = $(this).find('.script-select').val();
+                    const useCredentials = $(this).find('.use-credentials').is(':checked');
+                    const parameters = {};
+
+                    $(this).find('.parameters input').each(function () {
+                        const paramName = $(this).data('param');
+                        const paramValue = $(this).val();
+                        parameters[paramName] = paramValue;
+                    });
+
+                    groupData.push({ modelId, scriptId, useCredentials, parameters });
+                });
+
+                $.ajax({
+                    url: '/execute-group-scripts',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ groupData }),
+                    success: function (response) {
+                        alert('Scripts executados com sucesso!');
+                        $('#manageModal').modal('hide');
+                    },
+                    error: function () {
+                        alert('Erro ao executar scripts.');
+                    }
+                });
+            });
         });
     </script>
-    
 </body>
 </html>
