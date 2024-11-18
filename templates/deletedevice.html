@@ -1,0 +1,278 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Deletar Dispositivos</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Layout principal */
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente em telas pequenas */
+            transition: left 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            text-decoration: none;
+            transition: background 0.3s ease;
+            display: block;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+
+        /* Botão de Toggle para Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        .sidebar.show + #sidebarToggle {
+            color: white; /* Torna o ícone branco quando a sidebar está visível */
+        }
+        
+        /* Conteúdo principal */
+        .content {
+            flex-grow: 1;
+            margin-left: 250px;
+            padding: 30px;
+            transition: margin-left 0.3s ease;
+            width: 100%;
+        }
+        .sidebar.show + .content {
+            margin-left: 250px;
+        }
+
+        /* Ajustes para telas pequenas */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+        }
+
+        /* Container do formulário */
+        .form-container {
+            max-width: 800px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        /* Tabela Responsiva */
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+
+        /* Botão de exclusão */
+        .btn-danger {
+            background-color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-danger:hover {
+            background-color: #c82333;
+            border-color: #bd2130;
+        }
+
+        /* Modal Responsivo */
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 20px;
+            border: 1px solid #888;
+            width: 80%;
+            max-width: 500px;
+            border-radius: 8px;
+        }
+        .close {
+            color: #aaa;
+            float: right;
+            font-size: 28px;
+            font-weight: bold;
+        }
+        .close:hover,
+        .close:focus {
+            color: black;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <!-- Botão de Toggle para Sidebar -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/adddevice"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
+        <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
+        <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
+        <a href="/deletedevice" class="active"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
+        <a href="/creategroup"><i class="fas fa-users"></i> Criar Grupo</a>
+        <a href="/deletegroup"><i class="fas fa-times-circle"></i> Deletar Grupos</a>
+        <a href="/managerdevices"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
+        <a href="/managergroups"><i class="fas fa-layer-group"></i> Gerenciar Grupos</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Conteúdo principal -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Deletar Dispositivos Cadastrados</h2>
+            <div class="table-container">
+                <table class="table table-striped table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th>Nome do Dispositivo</th>
+                            <th>Modelo</th>
+                            <th>MAC Address</th>
+                            <th>Grupo</th>
+                            <th>Endereço IP</th>
+                            <th>Tipo de Acesso</th>
+                            <th>Ações</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dispositivo in dispositivos %}
+                        <tr>
+                            <td>{{ dispositivo.nome }}</td>
+                            <td>{{ dispositivo.modelo_nome }}</td>
+                            <td>{{ dispositivo.mac_address }}</td>
+                            <td>{{ dispositivo.grupo_nome }}</td>
+                            <td>{{ dispositivo.ip }}</td>
+                            <td>
+                                {% if dispositivo.access_type == 'user_password' %}
+                                    Usuário e Senha
+                                {% else %}
+                                    Somente Senha
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-danger btn-sm" onclick="confirmDelete('{{ dispositivo.id_dispositivo }}')">Excluir</button>
+                            </td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nenhum dispositivo cadastrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            <div id="resultMessage" class="text-center mt-3"></div>
+        </div>
+    </div>
+
+    <!-- Modal de Confirmação de Exclusão -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <h4 class="mb-3">Confirmar Exclusão</h4>
+            <p>Tem certeza de que deseja excluir este dispositivo? Esta ação não pode ser desfeita.</p>
+            <button type="button" class="btn btn-danger" onclick="deleteDevice()">Confirmar Exclusão</button>
+            <button type="button" class="btn btn-secondary" onclick="closeModal()">Cancelar</button>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        let deviceToDelete = null;
+
+        function confirmDelete(id_dispositivo) {
+            deviceToDelete = id_dispositivo;
+            document.getElementById("deleteModal").style.display = "block";
+        }
+
+        function closeModal() {
+            document.getElementById("deleteModal").style.display = "none";
+            deviceToDelete = null;
+        }
+
+        function deleteDevice() {
+            if (!deviceToDelete) return;
+
+            $.ajax({
+                url: `/deletedevice`,
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ id_dispositivo: deviceToDelete }),
+                success: function(response) {
+                    if (response.success) {
+                        $("#resultMessage").html(`<span class="text-success">${response.message}</span>`);
+                        closeModal();
+                        setTimeout(function() {
+                            location.reload();
+                        }, 2000);
+                    } else {
+                        $("#resultMessage").html(`<span class="text-danger">${response.message}</span>`);
+                    }
+                },
+                error: function() {
+                    $("#resultMessage").html(`<span class="text-danger">Erro ao excluir o dispositivo. Tente novamente.</span>`);
+                }
+            });
+        }
+
+        // Fecha o modal ao clicar fora dele
+        window.onclick = function(event) {
+            if (event.target == document.getElementById("deleteModal")) {
+                closeModal();
+            }
+        }
+
+        // Sidebar Toggle para Mobile e Desktop
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40'); // Altera a cor do ícone
+        });
+    </script>
+</body>
+</html>

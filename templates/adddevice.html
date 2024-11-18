@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cadastrar Dispositivo</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover,
+        .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+        }
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px;
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0;
+            }
+        }
+        .form-container {
+            max-width: 600px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.9rem;
+            display: none;
+        }
+        #resultMessage {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            opacity: 1;
+            transition: opacity 2s ease; /* Adiciona a transição de opacidade */
+        }
+    </style>
+</head>
+<body>
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/adddevice" class="active"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
+        <a href="/viewdevices"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
+        <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
+        <a href="/deletedevice"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
+        <a href="/creategroup"><i class="fas fa-users"></i> Criar Grupo</a>
+        <a href="/deletegroup"><i class="fas fa-times-circle"></i> Deletar Grupos</a>
+        <a href="/managerdevices"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
+        <a href="/managergroups"><i class="fas fa-layer-group"></i> Gerenciar Grupos</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Cadastrar Novo Dispositivo</h2>
+            <form id="deviceForm">
+                <div class="form-group">
+                    <label for="nome" class="font-weight-bold">Nome do Dispositivo</label>
+                    <input type="text" id="nome" class="form-control" placeholder="Nome do Dispositivo" required>
+                </div>
+                <div class="form-group">
+                    <label for="id_modelo" class="font-weight-bold">Modelo</label>
+                    <select id="id_modelo" class="form-control">
+                        <option value="">Selecione o modelo</option>
+                        {% for modelo in modelos %}
+                            <option value="{{ modelo[0] }}">{{ modelo[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="mac_address" class="font-weight-bold">MAC Address</label>
+                    <input type="text" id="mac_address" class="form-control" placeholder="00:00:00:00:00:00" maxlength="17" required>
+                    <small class="error-message" id="macAddressError">O MAC Address é inválido. Use apenas caracteres hexadecimais e separadores ":".</small>
+                </div>
+                <div class="form-group">
+                    <label for="id_grupo" class="font-weight-bold">Grupo</label>
+                    <select id="id_grupo" class="form-control">
+                        <option value="">Selecione o grupo</option>
+                        {% for grupo in grupos %}
+                            <option value="{{ grupo[0] }}">{{ grupo[1] }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="ip" class="font-weight-bold">Endereço IP</label>
+                    <input type="text" id="ip" class="form-control" placeholder="Endereço IP" required>
+                </div>
+                <div class="form-group">
+                    <label for="access_type" class="font-weight-bold">Tipo de Acesso</label>
+                    <select id="access_type" class="form-control">
+                        <option value="user_password" selected>Acesso com nome de usuário e senha</option>
+                        <option value="password_only">Acesso apenas com senha</option>
+                    </select>
+                </div>
+                <div class="form-group optional-field" id="usernameFieldContainer">
+                    <label for="username" class="font-weight-bold">Username</label>
+                    <input type="text" id="username" class="form-control" placeholder="Username" required>
+                </div>
+                <div class="form-group">
+                    <label for="password" class="font-weight-bold">Password</label>
+                    <input type="password" id="password" class="form-control" placeholder="Password" required>
+                </div>
+                <div class="form-group text-center">
+                    <button type="button" id="submitBtn" class="btn btn-primary btn-block">Cadastrar Dispositivo</button>
+                </div>
+            </form>
+            <div id="resultMessage" class="text-center"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        $(document).ready(function() {
+            $('#sidebarToggle').click(function() {
+                $('.sidebar').toggleClass('show');
+                $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+            });
+
+            function toggleUsernameField() {
+                const accessType = $('#access_type').val();
+                if (accessType === 'password_only') {
+                    $('#usernameFieldContainer').hide();
+                    $('#username').prop('required', false);
+                } else {
+                    $('#usernameFieldContainer').show();
+                    $('#username').prop('required', true);
+                }
+            }
+
+            $('#access_type').change(toggleUsernameField);
+            toggleUsernameField();
+
+            function validateMacAddress() {
+                const macAddress = $('#mac_address').val();
+                const macRegex = /^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$/;
+                if (!macRegex.test(macAddress)) {
+                    $('#macAddressError').show();
+                    return false;
+                }
+                $('#macAddressError').hide();
+                return true;
+            }
+
+            $('#mac_address').on('input', function() {
+                const value = $(this).val().replace(/[^A-Fa-f0-9]/g, '').toUpperCase();
+                $(this).val(value.match(/.{1,2}/g)?.join(':') || value);
+                validateMacAddress();
+            });
+
+            $('#submitBtn').click(function() {
+                if (!validateMacAddress()) {
+                    $('#resultMessage').text('Por favor, insira um MAC Address válido.').removeClass('text-success').addClass('text-danger').show();
+                    return;
+                }
+
+                const formData = {
+                    nome: $('#nome').val(),
+                    id_modelo: $('#id_modelo').val(),
+                    mac_address: $('#mac_address').val(),
+                    id_grupo: $('#id_grupo').val(),
+                    ip: $('#ip').val(),
+                    access_type: $('#access_type').val(),
+                    username: $('#username').val(),
+                    password: $('#password').val()
+                };
+
+                $.ajax({
+                    url: "/adddevice",
+                    type: "POST",
+                    contentType: "application/json",
+                    data: JSON.stringify(formData),
+                    success: function(response) {
+                        $('#resultMessage').text(response.message).removeClass('text-danger').addClass('text-success').show();
+                        $('#deviceForm')[0].reset();
+                        toggleUsernameField();
+
+                        setTimeout(function() {
+                            $('#resultMessage').fadeOut(2000);
+                        }, 2000); 
+                    },
+                    error: function(error) {
+                        $('#resultMessage').text(error.responseJSON.message).removeClass('text-success').addClass('text-danger').show();
+                        
+                        setTimeout(function() {
+                            $('#resultMessage').fadeOut(2000);
+                        }, 2000);
+                    }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

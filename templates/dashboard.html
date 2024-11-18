@@ -3,113 +3,138 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Dashboard - Gerenciamento de Usuários</title>
-    <!-- Link do Bootstrap CSS -->
+    <title>Dashboard - Projeto SEGURA</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
     <style>
         body {
             display: flex;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+            overflow-x: hidden;
         }
+
         .sidebar {
-            height: 100vh;
+            width: 250px;
             background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
             padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            transition: transform 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.hide {
+            transform: translateX(-250px);
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
         }
         .sidebar a {
             color: white;
-            margin: 10px 0;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
         }
         .sidebar a:hover {
+            background-color: #495057;
             color: #ffc107;
         }
-        .main-content {
-            flex-grow: 1;
-            padding: 20px;
+
+        #sidebarToggle {
+            font-size: 1.5rem;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            color: white; /* Começa como branco */
+            transition: color 0.3s ease;
         }
-        .card {
-            margin-bottom: 20px;
+        /* Cor ajustada ao estado da sidebar */
+        #sidebarToggle.toggle-on {
+            color: #343a40; /* Fica escuro quando a sidebar está escondida */
+        }
+
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            margin-left: 250px;
+            transition: margin-left 0.3s ease;
+            text-align: center;
+        }
+        .content.shrink {
+            margin-left: 0;
+        }
+
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar.hide {
+                transform: translateX(-250px);
+            }
+            .sidebar.show {
+                transform: translateX(0);
+            }
+            #sidebarToggle {
+                display: block;
+            }
+        }
+
+        .welcome-section {
+            margin-top: 30px;
+        }
+        .welcome-section img {
+            max-width: 300px;
+            margin: 20px auto;
         }
     </style>
 </head>
 <body>
-    <div class="sidebar col-md-2">
-        <h2 class="text-white text-center">Menu</h2>
-        <a href="#" class="btn btn-dark btn-block" data-toggle="modal" data-target="#createUserModal">Criar Usuário</a>
-        <a href="#" class="btn btn-dark btn-block">Visualizar Usuários</a>
-        <a href="#" class="btn btn-dark btn-block">Configurações</a>
-        <a href="#" class="btn btn-dark btn-block">Sair</a>
+
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <div class="sidebar" id="sidebar">
+        <h2>Menu</h2>
+        <a href="/createuser"><i class="fas fa-user-plus"></i> Gerenciar Usuários</a>
+        <a href="/addmodel"><i class="fas fa-network-wired"></i> Adicionar Modelo</a>
+        <a href="/adddevice"><i class="fas fa-cogs"></i> Painel de Dispositivos</a>        
+        <a href="/logout"><i class="fas fa-sign-out-alt"></i> Sair</a>
     </div>
-    <div class="main-content col-md-10">
+
+    <div class="content" id="mainContent">
         <h1 class="text-center">Dashboard</h1>
         <div class="container mt-4">
-            <h2>Bem-vindo ao Gerenciamento de Usuários</h2>
-            <p>Escolha uma opção no menu à esquerda para começar.</p>
-            <div class="row">
-                <div class="col-md-4">
-                    <a href="#" class="btn btn-primary btn-lg btn-block" data-toggle="modal" data-target="#createUserModal">Criar Novo Usuário</a>
-                </div>
-                <div class="col-md-4">
-                    <a href="#" class="btn btn-success btn-lg btn-block">Visualizar Usuários</a>
-                </div>
-                <div class="col-md-4">
-                    <a href="#" class="btn btn-warning btn-lg btn-block">Configurações</a>
-                </div>
+            <div class="welcome-section">
+                <h3>Bem Vindo ao Sistema Especializado no Gerenciamento Unificado de Redes com Access Points de baixo custo</h3>
+                <img src="static/LOGO_SEGURA.png" alt="Logo Segura">
             </div>
         </div>
     </div>
 
-    <!-- Modal para Criar Usuário -->
-    <div class="modal fade" id="createUserModal" tabindex="-1" role="dialog" aria-labelledby="createUserModalLabel" aria-hidden="true">
-        <div class="modal-dialog" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="createUserModalLabel">Criar Novo Usuário</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Fechar">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body">
-                    <form id="createUserForm">
-                        <div class="form-group">
-                            <label for="username">Nome de Usuário</label>
-                            <input type="text" class="form-control" id="username" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="email">Email</label>
-                            <input type="email" class="form-control" id="email" required>
-                        </div>
-                        <div class="form-group">
-                            <label for="password">Senha</label>
-                            <input type="password" class="form-control" id="password" required>
-                        </div>
-                    </form>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
-                    <button type="button" class="btn btn-primary" id="submitUserBtn">Criar Usuário</button>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Link do Bootstrap JS e dependências -->
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        document.getElementById('submitUserBtn').addEventListener('click', function() {
-            // Aqui você pode adicionar a lógica para enviar os dados do formulário para o servidor
-            const username = document.getElementById('username').value;
-            const email = document.getElementById('email').value;
-            const password = document.getElementById('password').value;
+        document.getElementById("sidebarToggle").addEventListener("click", function() {
+            const sidebar = document.getElementById("sidebar");
+            const content = document.getElementById("mainContent");
 
-            // Simulação de criação de usuário
-            alert(`Usuário criado:\nNome: ${username}\nEmail: ${email}`);
-            // Limpar o formulário
-            document.getElementById('createUserForm').reset();
-            // Fechar o modal
-            $('#createUserModal').modal('hide');
+            sidebar.classList.toggle("hide");
+            content.classList.toggle("shrink");
+
+            // Alterna a cor do ícone de acordo com o estado
+            this.classList.toggle("toggle-on");
         });
     </script>
 </body>

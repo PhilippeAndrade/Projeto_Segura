@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Adicionar Modelo</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body { display: flex; min-height: 100vh; background-color: #f8f9fa; margin: 0; }
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente */
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0; /* Sidebar visível */
+        }
+        .sidebar h2 { font-size: 1.5rem; text-align: center; margin-bottom: 1rem; }
+        .sidebar a {
+            color: white; padding: 15px 20px; font-size: 1.1rem;
+            transition: background 0.3s ease; text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057; color: #ffc107;
+        }
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+        /* Conteúdo */
+        .content { 
+            flex-grow: 1; 
+            padding: 30px; 
+            margin-left: 250px; /* Deixa espaço para a sidebar */
+            transition: margin-left 0.3s ease;
+        }
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px; /* Sidebar oculta em telas pequenas */
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0; /* Sidebar visível em telas pequenas */
+            }
+        }
+        /* Estilo do formulário */
+        .form-container { 
+            max-width: 600px; margin: auto; background: #ffffff; padding: 30px;
+            border-radius: 8px; box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1); 
+        }
+        .btn-primary { background-color: #007bff; border-color: #007bff; }
+        .btn-primary:hover { background-color: #0056b3; border-color: #0056b3; }
+
+        /* Estilo para exibir e ocultar regras */
+        .rule-list {
+            font-size: 0.9rem; color: #555; margin-top: 5px; display: none;
+            transition: opacity 0.4s ease-in-out;
+        }
+        .rule-list.expand { display: block; opacity: 1; }
+        .rule-item { display: flex; align-items: center; }
+        .rule-item span { margin-left: 5px; }
+        .rule-item .valid { color: green; display: inline; }
+        .rule-item .invalid { color: red; display: inline; }
+        
+        /* Mensagem de resultado */
+        #resultMessage { margin-top: 15px; font-size: 0.9rem; opacity: 1; transition: opacity 2s ease; }
+
+        /* Garantir que campos de entrada estejam acima dos elementos */
+        #nome, #fabricante { position: relative; z-index: 2; }
+    </style>
+</head>
+<body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="#" class="active"><i class="fas fa-cube"></i> Cadastrar Modelo</a>
+        <a href="/viewmodel"><i class="fas fa-eye"></i> Visualizar Modelos</a>
+        <a href="/altermodel"><i class="fas fa-edit"></i> Alterar Modelos</a>
+        <a href="/deletemodel"><i class="fas fa-trash-alt"></i> Deletar Modelos</a>
+        <a href="/uploadscript"><i class="fas fa-upload"></i> Upload de Scripts</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Adicionar Novo Modelo</h2>
+            <form id="modelForm">
+                <div class="form-group">
+                    <label for="nome" class="font-weight-bold">Nome do Modelo</label>
+                    <input type="text" id="nome" class="form-control" placeholder="Nome do Modelo">
+                    <div id="rules" class="rule-list">
+                        <div class="rule-item" id="ruleLowercase">
+                            <i class="fas fa-times invalid"></i><span>Deve estar em letras minúsculas</span>
+                        </div>
+                        <div class="rule-item" id="ruleNoSpaces">
+                            <i class="fas fa-times invalid"></i><span>Não pode conter espaços</span>
+                        </div>
+                        <div class="rule-item" id="ruleUnderscore">
+                            <i class="fas fa-times invalid"></i><span>Deve usar apenas underscore para separação</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label for="fabricante" class="font-weight-bold">Fabricante*</label>
+                    <input type="text" id="fabricante" class="form-control" placeholder="Fabricante">
+                </div>
+                <div class="form-group text-center">
+                    <button type="submit" id="submitBtn" class="btn btn-primary btn-block">Adicionar Modelo</button>
+                </div>
+            </form>
+            <div id="resultMessage" class="text-center"></div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            // Função de Toggle da Sidebar
+            $('#sidebarToggle').click(function() {
+                $('.sidebar').toggleClass('show');
+                $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+            });
+
+            const nomeField = document.getElementById("nome");
+            const fabricanteField = document.getElementById("fabricante");
+            const resultMessage = document.getElementById("resultMessage");
+            const form = document.getElementById("modelForm");
+
+            const ruleLowercase = document.getElementById("ruleLowercase");
+            const ruleNoSpaces = document.getElementById("ruleNoSpaces");
+            const ruleUnderscore = document.getElementById("ruleUnderscore");
+            const rules = document.getElementById("rules");
+
+            function validateForm() {
+                const nome = nomeField.value.trim(); // Remove espaços ao redor
+                const isLowercase = /^[a-z0-9_]+$/.test(nome);
+                const noSpaces = nome.indexOf(" ") === -1;
+                const onlyUnderscore = /^[a-z0-9_]+$/.test(nome);
+                updateRule(ruleLowercase, isLowercase);
+                updateRule(ruleNoSpaces, noSpaces);
+                updateRule(ruleUnderscore, onlyUnderscore);
+
+                if (!(isLowercase && noSpaces && onlyUnderscore)) {
+                    rules.classList.add("expand");
+                }
+                return isLowercase && noSpaces && onlyUnderscore;
+            }
+
+            function updateRule(element, isValid) {
+                const icon = element.querySelector("i");
+                if (isValid) {
+                    icon.classList.remove("fa-times", "invalid");
+                    icon.classList.add("fa-check", "valid");
+                    icon.style.color = "green";
+                    element.style.display = "flex";
+                } else {
+                    icon.classList.remove("fa-check", "valid");
+                    icon.classList.add("fa-times", "invalid");
+                    icon.style.color = "red";
+                    element.style.display = "flex";
+                }
+            }
+
+            nomeField.addEventListener("focus", () => { rules.classList.add("expand"); });
+            nomeField.addEventListener("input", () => { if (validateForm()) rules.classList.remove("expand"); });
+            nomeField.addEventListener("blur", () => { if (validateForm()) rules.classList.remove("expand"); });
+
+            form.addEventListener("submit", function(event) {
+                event.preventDefault();
+                if (validateForm()) {
+                    $.ajax({
+                        url: "/addmodel",
+                        type: "POST",
+                        contentType: "application/json",
+                        data: JSON.stringify({
+                            nome: nomeField.value.trim(),
+                            fabricante: fabricanteField.value
+                        }),
+                        success: function(response) {
+                            resultMessage.innerHTML = `<span class="text-success">${response.message}</span>`;
+                            resultMessage.style.opacity = 1;
+                            nomeField.value = "";
+                            fabricanteField.value = "";
+                            rules.classList.remove("expand");
+                        },
+                        error: function() {
+                            resultMessage.innerHTML = `<span class="text-danger">Erro ao processar o pedido. Tente novamente.</span>`;
+                            resultMessage.style.opacity = 1;
+                        }
+                    });
+                }
+            });
+        });
+    </script>
+</body>
+</html>

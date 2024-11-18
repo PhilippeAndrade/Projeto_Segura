@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload de Scripts</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        /* Estilo base da página */
+        body {
+            display: flex;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f8f9fa;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            height: 100vh;
+            position: fixed;
+            top: 0;
+            left: -250px;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0;
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+            display: block;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+
+        /* Área de conteúdo principal */
+        .content {
+            flex-grow: 1;
+            margin-left: 250px;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Form Container */
+        .form-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+
+        /* Botão estilizado para upload */
+        .custom-file-upload {
+            display: inline-block;
+            padding: 10px 20px;
+            cursor: pointer;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            font-size: 1rem;
+            margin-top: 10px;
+            transition: background-color 0.3s ease;
+        }
+        .custom-file-upload i {
+            margin-right: 8px;
+        }
+        .custom-file-upload:hover {
+            background-color: #0056b3;
+        }
+
+        /* Esconde o input de arquivo */
+        #script_file {
+            display: none;
+        }
+
+        /* Exibição de nomes de arquivos selecionados */
+        .file-names {
+            margin-top: 15px;
+            font-size: 0.9rem;
+            color: #555;
+        }
+
+        /* Botão principal */
+        .btn-primary {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .btn-primary:hover {
+            background-color: #0056b3;
+            border-color: #0056b3;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px;
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <!-- Sidebar de navegação -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/addmodel"><i class="fas fa-cube"></i> Cadastrar Modelo</a>
+        <a href="/viewmodel"><i class="fas fa-eye"></i> Visualizar Modelos</a>
+        <a href="/altermodel"><i class="fas fa-edit"></i> Alterar Modelos</a>
+        <a href="/deletemodel"><i class="fas fa-trash-alt"></i> Deletar Modelos</a>
+        <a href="/uploadscript" class="active"><i class="fas fa-upload"></i> Upload de Scripts</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+   <!-- Área de conteúdo principal -->
+<div class="content">
+    <div class="form-container">
+        <h3 class="mt-4">Upload de Scripts</h3>
+
+       <!-- Exibe mensagens de erro e sucesso apenas para a rota upload_script -->
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+            {% if 'upload_script' in category %}
+            <div class="alert alert-{{ category.split(' ')[0] }} mt-2">{{ message }}</div>
+            {% endif %}
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <!-- Formulário de Upload de Scripts -->
+        <form method="POST" enctype="multipart/form-data" action="{{ url_for('upload_script') }}">
+            <div class="form-group">
+                <label for="router_model_id">Modelo do Roteador:</label>
+                <select name="router_model_id" id="router_model_id" class="form-control" required>
+                    {% if router_models %}
+                        {% for model in router_models %}
+                        <option value="{{ model['id'] }}">{{ model['nome'] }}</option>
+                        {% endfor %}
+                    {% else %}
+                        <option value="">Nenhum modelo com pasta disponível</option>
+                    {% endif %}
+                </select>
+            </div>
+
+            <!-- Botão de upload estilizado -->
+            <label class="custom-file-upload" for="script_file">
+                <i class="fas fa-file-upload"></i>Escolher Arquivos de Script (.py)
+            </label>
+            <input type="file" name="script_file" id="script_file" required accept=".py" multiple onchange="displayFileNames()">
+
+            <!-- Exibição dos arquivos selecionados -->
+            <div id="fileNames" class="file-names"></div>
+            
+            <!-- Campo de Descrição do Script -->
+            <div class="form-group mt-3">
+                <label for="script_description">Descrição do Script:</label>
+                <textarea name="script_description" id="script_description" class="form-control" rows="3" placeholder="Escreva uma breve descrição do script..." required></textarea>
+            </div>
+        
+
+            <!-- Campos de Parâmetros do Script -->
+            <div class="form-group">
+                <label for="script_parameters">Parâmetros do Script:</label>
+                <div id="parameter-fields">
+                    <!-- Campos de parâmetro serão inseridos aqui dinamicamente -->
+                </div>
+                <button type="button" class="btn btn-secondary mt-2" onclick="addParameterField()">Adicionar Parâmetro</button>
+            </div>
+
+            <button type="submit" class="btn btn-primary mt-3">Carregar Script</button>
+        </form>
+
+        <a href="/dashboard" class="btn btn-primary mt-3">Voltar ao Dashboard</a>
+    </div>
+</div>
+
+<!-- Scripts -->
+<script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+<script>
+    // Função de Toggle da Sidebar
+    $(document).ready(function() {
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+        });
+    });
+
+    // Função para exibir os nomes dos arquivos selecionados
+    function displayFileNames() {
+        const input = document.getElementById('script_file');
+        const fileNamesDiv = document.getElementById('fileNames');
+        const fileNames = Array.from(input.files).map(file => file.name);
+        fileNamesDiv.innerHTML = fileNames.length ? `<strong>Arquivos Selecionados:</strong><br>${fileNames.join('<br>')}` : '';
+    }
+
+    // Função para adicionar campos de nome e descrição do parâmetro dinamicamente
+    function addParameterField() {
+        const parameterFields = document.getElementById('parameter-fields');
+        const div = document.createElement('div');
+        div.className = 'mb-4';  // Espaçamento entre os conjuntos de parâmetros
+        div.innerHTML = `
+            <div class="input-group mb-2">
+                <input type="text" name="parameters[]" class="form-control" placeholder="Nome do Parâmetro" required>
+                <div class="input-group-append">
+                    <button type="button" class="btn btn-danger" onclick="removeParameterField(this)">Remover</button>
+                </div>
+            </div>
+            <textarea name="descriptions[]" class="form-control mb-2" rows="2" placeholder="Descrição do Parâmetro" required></textarea>
+        `;
+        parameterFields.appendChild(div);
+    }
+
+    // Função para remover campo de parâmetro
+    function removeParameterField(button) {
+        const field = button.closest('.mb-4');  // Remove o bloco completo do parâmetro
+        field.parentNode.removeChild(field);
+    }
+</script>
+</body>
+</html>
+

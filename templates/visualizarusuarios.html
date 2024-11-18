@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Usuários</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            height: 100vh;
+            position: fixed;
+            left: -250px; /* Sidebar oculta inicialmente */
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0; /* Sidebar visível */
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+
+        /* Content */
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            margin-left: 250px; /* Espaço para o sidebar */
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            transition: margin-left 0.3s ease;
+        }
+
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px;
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0;
+            }
+        }
+
+        .form-container {
+            max-width: 600px;
+            width: 100%;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            margin-top: 0px;
+            text-align: center;
+        }
+        .message-box {
+            font-size: 0.9rem;
+            margin-top: 15px;
+            opacity: 1;
+            transition: opacity 2s ease;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/createuser"><i class="fas fa-user-plus"></i> Cadastrar Usuário</a>
+        <a href="/visualizarusuarios" class="active"><i class="fas fa-eye"></i> Visualizar Usuários</a>
+        <a href="/alterarusuarios"><i class="fas fa-edit"></i> Alterar Usuários</a>
+        <a href="/deletarusuarios"><i class="fas fa-user-minus"></i> Deletar Usuários</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Usuários Cadastrados</h2>
+
+            <!-- Mensagem de sucesso -->
+            <div id="resultMessage" class="message-box" style="display: none;"></div>
+
+            <table class="table table-bordered">
+                <thead class="thead-dark">
+                    <tr>
+                        <th>Nome de Usuário</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for usuario in usuarios %}
+                    <tr>
+                        <td>{{ usuario[1] }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+        // Função para exibir a mensagem de resultado dentro do form-container
+        function showResultMessage(message, isSuccess = true) {
+            const resultMessage = document.getElementById('resultMessage');
+            resultMessage.textContent = message;
+            resultMessage.className = isSuccess ? 'message-box text-success' : 'message-box text-danger';
+            resultMessage.style.display = 'block';
+            resultMessage.style.opacity = 1;
+
+            setTimeout(() => {
+                resultMessage.style.opacity = 0;
+                setTimeout(() => {
+                    resultMessage.style.display = 'none';
+                }, 2000);
+            }, 2000);
+        }
+
+        // Botão de toggle para a sidebar
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
+        });
+    </script>
+
+</body>
+</html>

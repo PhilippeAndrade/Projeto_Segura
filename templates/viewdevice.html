@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Visualizar Dispositivos</title>
+    <link rel="icon" href="static/LOGO_SEGURA_ICON.png" type="image/png">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            display: flex;
+            min-height: 100vh;
+            background-color: #f8f9fa;
+            margin: 0;
+        }
+        /* Sidebar */
+        .sidebar {
+            width: 250px;
+            background-color: #343a40;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            padding-top: 20px;
+            position: fixed;
+            height: 100vh;
+            left: -250px; /* Oculta a sidebar inicialmente */
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+        .sidebar.show {
+            left: 0; /* Sidebar visível */
+        }
+        .sidebar h2 {
+            font-size: 1.5rem;
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .sidebar a {
+            color: white;
+            padding: 15px 20px;
+            font-size: 1.1rem;
+            transition: background 0.3s ease;
+            text-decoration: none;
+        }
+        .sidebar a:hover, .sidebar a.active {
+            background-color: #495057;
+            color: #ffc107;
+        }
+        /* Botão de Toggle da Sidebar */
+        #sidebarToggle {
+            font-size: 1.5rem;
+            color: #343a40;
+            position: fixed;
+            top: 15px;
+            left: 15px;
+            cursor: pointer;
+            z-index: 1100;
+            transition: color 0.3s ease;
+        }
+        /* Muda a cor do ícone quando a sidebar está visível */
+        .sidebar.show + #sidebarToggle {
+            color: white;
+        }
+        /* Conteúdo */
+        .content {
+            flex-grow: 1;
+            padding: 30px;
+            margin-left: 250px; /* Deixa espaço para a sidebar */
+            transition: margin-left 0.3s ease;
+        }
+        /* Responsividade */
+        @media (max-width: 768px) {
+            .content {
+                margin-left: 0;
+                padding-top: 50px;
+            }
+            .sidebar {
+                left: -250px; /* Sidebar oculta em telas pequenas */
+                position: fixed;
+            }
+            .sidebar.show {
+                left: 0; /* Sidebar visível em telas pequenas */
+            }
+        }
+        /* Estilo da tabela e container */
+        .form-container {
+            max-width: 800px;
+            margin: auto;
+            background: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .table-container {
+            margin-top: 20px;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <!-- Botão de Toggle da Sidebar para dispositivos móveis -->
+    <i id="sidebarToggle" class="fas fa-bars"></i>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>Menu</h2>
+        <a href="/adddevice"><i class="fas fa-plus-circle"></i> Cadastrar Dispositivo</a>
+        <a href="/viewdevices" class="active"><i class="fas fa-eye"></i> Visualizar Dispositivos</a>
+        <a href="/alterdevices"><i class="fas fa-edit"></i> Alterar Dispositivos</a>
+        <a href="/deletedevice"><i class="fas fa-trash-alt"></i> Deletar Dispositivos</a>
+        <a href="/creategroup"><i class="fas fa-users"></i> Criar Grupo</a>
+        <a href="/deletegroup"><i class="fas fa-times-circle"></i> Deletar Grupos</a>
+        <a href="/managerdevices"><i class="fas fa-wifi"></i> Gerenciar Dispositivos</a>
+        <a href="/managergroups"><i class="fas fa-layer-group"></i> Gerenciar Grupos</a>
+        <a href="/dashboard"><i class="fas fa-arrow-left"></i> Voltar ao Dashboard</a>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+        <div class="form-container">
+            <h2 class="text-center mb-4">Dispositivos Cadastrados</h2>
+            <div class="table-container">
+                <table class="table table-striped table-bordered">
+                    <thead class="thead-dark">
+                        <tr>
+                            <th scope="col">Nome do Dispositivo</th>
+                            <th scope="col">Modelo</th>
+                            <th scope="col">MAC Address</th>
+                            <th scope="col">Grupo</th>
+                            <th scope="col">Endereço IP</th>
+                            <th scope="col">Tipo de Acesso</th>
+                            <th scope="col">Usuário</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for dispositivo in dispositivos %}
+                        <tr>
+                            <td>{{ dispositivo.nome }}</td>
+                            <td>{{ dispositivo.modelo_nome }}</td>
+                            <td>{{ dispositivo.mac_address }}</td>
+                            <td>{{ dispositivo.grupo_nome }}</td>
+                            <td>{{ dispositivo.ip }}</td>
+                            <td>{{ dispositivo.access_type | replace('_', ' ') }}</td>
+                            <td>{% if dispositivo.username %}{{ dispositivo.username }}{% else %}-{% endif %}</td>
+                        </tr>
+                        {% else %}
+                        <tr>
+                            <td colspan="7" class="text-center">Nenhum dispositivo cadastrado.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- jQuery -->
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script>
+        // Toggle da Sidebar
+        $('#sidebarToggle').click(function() {
+            $('.sidebar').toggleClass('show');
+            $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40'); // Altera a cor do ícone
+        });
+    </script>
+</body>
+</html>
