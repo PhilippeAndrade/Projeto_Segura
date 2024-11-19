@@ -34,7 +34,7 @@ def decrypt_password(encrypted_password):
 # Configuração para conexão com o banco de dados MySQL
 app.config['MYSQL_HOST'] = "localhost"
 app.config['MYSQL_USER'] = "root"
-app.config['MYSQL_PASSWORD'] = "root"
+app.config['MYSQL_PASSWORD'] = "admin"
 app.config['MYSQL_DB'] = "segura"
 
 # Inicializa a conexão com o MySQL
@@ -78,6 +78,9 @@ def login_required(f):
     return decorated_function
 
 # Rota inicial que redireciona para o login
+
+
+
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -914,11 +917,21 @@ def execute_script(model_name, device_id, script_name):
         if not ip:
             return jsonify({"message": "O campo 'ip' é obrigatório."}), 400
 
-        # Parâmetros opcionais
-        username = data.get("username")
-        senha = data.get("senha")
-        access_type = data.get("access_type")
-        parametros = data.get("parametros", {})
+        # Busca credenciais do dispositivo
+        cursor = mysql.connection.cursor()
+        query = """
+            SELECT username, password, access_type
+            FROM dispositivos
+            WHERE id_dispositivo = %s
+        """
+        cursor.execute(query, (device_id,))
+        device_data = cursor.fetchone()
+
+        if not device_data:
+            return jsonify({"message": "Dispositivo não encontrado."}), 404
+
+        username, password_encrypted, access_type = device_data
+        senha = cipher_suite.decrypt(password_encrypted.encode()).decode() if password_encrypted else None
 
         # Construção do caminho do script
         base_dir = os.path.dirname(__file__)
@@ -930,47 +943,72 @@ def execute_script(model_name, device_id, script_name):
         # Monta o comando base do script
         comando_script = [sys.executable, script_path, '--ip', ip]
 
-        # Adiciona parâmetros opcionais conforme necessário
         if access_type == 'user_password':
-            if username and senha:
-                comando_script += ['--username', username, '--password', senha]
-            else:
-                logging.error("Parâmetros 'username' e 'senha' ausentes para 'user_password'.")
-                return jsonify({
-                    "message": "Os campos 'username' e 'senha' são obrigatórios para o tipo de acesso 'user_password'."
-                }), 400
+            comando_script += ['--username', username, '--password', senha]
         elif access_type == 'password_only':
-            if senha:
-                comando_script += ['--password', senha]
-            else:
-                logging.error("Parâmetro 'senha' ausente para 'password_only'.")
-                return jsonify({
-                    "message": "O campo 'senha' é obrigatório para o tipo de acesso 'password_only'."
-                }), 400
+            comando_script += ['--password', senha]
 
-        # Adiciona outros parâmetros dinâmicos
+        # Adiciona outros parâmetros enviados pelo cliente
+        parametros = data.get("parametros", {})
         for param, value in parametros.items():
             comando_script += [f"--{param}", str(value)]
 
-        # Executa o script e captura stdout/stderr
         logging.info(f"Executando comando: {' '.join(comando_script)}")
+        
+        # Executa o script e captura stdout/stderr
         resultado_execucao = subprocess.run(
-            comando_script, capture_output=True, text=True
+            comando_script,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=os.environ.copy()
         )
 
-        # Verifica a execução do script
+        # Logs detalhados para análise
+        stdout = resultado_execucao.stdout.strip()
+        stderr = resultado_execucao.stderr.strip()
         if resultado_execucao.returncode != 0:
-            logging.error(f"Erro na execução do script: {resultado_execucao.stderr.strip()}")
+            logging.error(f"Erro na execução do script: {stderr}")
             return jsonify({
-                "output": resultado_execucao.stdout.strip(),
-                "error": resultado_execucao.stderr.strip(),
+                "output": stdout,
+                "error": stderr,
                 "command_executed": ' '.join(comando_script),
                 "message": "Erro na execução do script."
             }), 500
+        logging.info(f"stdout: {resultado_execucao.stdout.strip()}")
+        logging.error(f"stderr: {resultado_execucao.stderr.strip()}")  
 
-        # Retorna a saída do script em caso de sucesso
+        # Processa a saída do script
+        if not stdout:
+            return jsonify({"message": "Erro: Saída do script vazia."}), 500
+
+
+        # Verifica se há credenciais novas na saída
+        new_username = None
+        new_password = None
+        if "NEW_CREDENTIALS" in stdout:
+                credentials_part = stdout.split("NEW_CREDENTIALS")[1].strip()
+                credentials = dict(item.split("=") for item in credentials_part.split(","))
+                new_username = credentials.get("username")
+                new_password = credentials.get("password")
+
+        # Atualiza as credenciais no banco
+        if new_password:
+            try:
+                encrypted_password = cipher_suite.encrypt(new_password.encode()).decode()
+                update_query = """
+                    UPDATE dispositivos
+                    SET username = %s, password = %s
+                    WHERE id_dispositivo = %s
+                """
+                cursor.execute(update_query, (new_username or username, encrypted_password, device_id))
+                mysql.connection.commit()
+            except Exception as e:
+                logging.error(f"Erro ao atualizar credenciais no banco: {e}")
+                return jsonify({"message": "Erro ao atualizar credenciais no banco.", "error": str(e)}), 500
+
         return jsonify({
-            "output": resultado_execucao.stdout.strip(),
+            "output": stdout,
             "error": None,
             "command_executed": ' '.join(comando_script),
             "message": "Script executado com sucesso."
@@ -978,11 +1016,7 @@ def execute_script(model_name, device_id, script_name):
 
     except Exception as e:
         logging.exception("Erro inesperado ao tentar executar o script.")
-        return jsonify({
-            "message": "Erro inesperado ao tentar executar o script.",
-            "error": str(e)
-        }), 500
-
+        return jsonify({"message": "Erro inesperado ao tentar executar o script.", "error": str(e)}), 500
 
 
 # Rota para gerenciar dispositivos

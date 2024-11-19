@@ -17,8 +17,7 @@ def configurar_rede(ip, password, ssid1, senha1, ssid2, senha2):
         
         # Acessa a página de login do roteador
     driver.get(f"http://{ip}")
-    wait = WebDriverWait(driver, 30)
-        # Insere a senha de administrador e faz login
+
     campo_senha_login = WebDriverWait(driver, 20).until(
         EC.presence_of_element_located((By.XPATH, '//*[@id="local-pwd-tb"]/div[2]/div[1]/span[2]/input[1]'))
     )
