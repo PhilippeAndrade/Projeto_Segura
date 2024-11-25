@@ -97,20 +97,42 @@
             margin: 0;
             background-color: #ffffff;
         }
-        .btn-primary {
-            background-color: #007bff;
-            border-color: #007bff;
-        }
-        .btn-primary:hover {
-            background-color: #0056b3;
-            border-color: #0056b3;
-        }
         .modal-body {
             max-height: 400px;
             overflow-y: auto;
         }
         .parameters input {
             margin-bottom: 10px;
+        }
+        #logContainer {
+            background: #f8f9fa;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            padding: 10px;
+            max-height: 200px;
+            overflow-y: auto;
+            margin-top: 20px;
+        }
+        #logContainer pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        #clearLogs {
+            margin-top: 10px; /* Espaçamento acima */
+            margin-bottom: 15px; /* Espaçamento abaixo */
+            display: block; /* Ocupa toda a linha */
+            background-color: #6c757d;
+            border: none;
+            color: white;
+            text-align: center;
+            width: 150px; /* Aumenta a largura */
+            height: 40px; /* Opcional: aumenta a altura */
+            font-size: 16px; /* Opcional: aumenta o tamanho do texto */
+            border-radius: 5px; /* Opcional: deixa os cantos arredondados */
+        }
+
+        #clearLogs:hover {
+            background-color: #5a6268;
         }
     </style>
 </head>
@@ -184,6 +206,8 @@
                 </div>
                 <div class="modal-body">
                     <div id="modalContent"></div>
+                    <div id="logContainer"><pre id="logContent"></pre></div>
+                    <button id="clearLogs" class="btn btn-secondary">Limpar Saída</button>
                 </div>
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-dismiss="modal">Fechar</button>
@@ -203,37 +227,6 @@
                 $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
             });
 
-            // Filtrar dispositivos por grupo
-            $('#groupFilter').change(function () {
-                const groupId = $(this).val();
-                $.ajax({
-                    url: '/managergroups',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify({ group_id: groupId }),
-                    success: function (response) {
-                        const tableBody = $('#deviceTableBody');
-                        tableBody.empty();
-                        response.devices.forEach(device => {
-                            tableBody.append(`
-                                <tr>
-                                    <td>${device.nome}</td>
-                                    <td>${device.modelo_nome}</td>
-                                    <td>${device.grupo_nome}</td>
-                                    <td>${device.ip}</td>
-                                    <td>
-                                        <button class="btn btn-warning manage-group" data-group="${device.grupo_nome}">Gerenciar</button>
-                                    </td>
-                                </tr>
-                            `);
-                        });
-                    },
-                    error: function () {
-                        alert('Erro ao carregar dispositivos do grupo.');
-                    }
-                });
-            });
-
             // Abrir modal para gerenciar grupo
             $(document).on('click', '.manage-group', function () {
                 const groupName = $(this).data('group');
@@ -250,7 +243,10 @@
                                     <p>Dispositivos: ${model.devices.join(', ')}</p>
                                     <label for="scriptSelect${model.id}">Selecionar Script:</label>
                                     <select id="scriptSelect${model.id}" class="form-control script-select" data-model="${model.id}">
-                                        ${model.scripts.map(script => `<option value="${script.id}">${script.name}</option>`).join('')}
+                                        ${model.scripts.map(script => `
+                                            <option value="${script.id}" data-script-info='${JSON.stringify(script)}'>
+                                                ${script.name}
+                                            </option>`).join('')}
                                     </select>
                                     <div class="form-check mt-3">
                                         <input type="checkbox" class="form-check-input use-credentials" id="useCredentials${model.id}">
@@ -269,23 +265,31 @@
             });
 
             // Atualizar parâmetros ao selecionar script
-            $(document).on('change', '.script-select', function () {
-                const modelId = $(this).data('model');
-                const scriptId = $(this).val();
-                const parametersDiv = $(`#parameters${modelId}`);
-                parametersDiv.empty();
+$(document).on('change', '.script-select', function () {
+    const modelId = $(this).data('model');
+    const scriptId = $(this).val();
+    const parametersDiv = $(`#parameters${modelId}`);
+    parametersDiv.empty();
 
-                const selectedScript = response.models.find(model => model.id === modelId)
-                    .scripts.find(script => script.id == scriptId);
+    const selectedScript = $(this).find(`option[value="${scriptId}"]`).data('script-info');
 
-                selectedScript.parameters.forEach(param => {
-                    parametersDiv.append(`
-                        <label>${param.description}:</label>
-                        <input type="text" class="form-control mb-2" data-param="${param.name}">
-                    `);
-                });
+    if (selectedScript && selectedScript.parameters) {
+        selectedScript.parameters.forEach(param => {
+            parametersDiv.append(`
+                <div class="form-group">
+                    <label>${param.name} - ${param.description}:</label>
+                    <input type="text" class="form-control mb-2" data-param="${param.name}" placeholder="Digite o valor">
+                </div>
+            `);
+        });
+    }
+});
+
+
+            // Limpar logs
+            $('#clearLogs').click(function () {
+                $('#logContent').empty();
             });
-            
 
             // Executar scripts do grupo
             $('#executeGroupScripts').click(function () {
@@ -302,20 +306,30 @@
                         parameters[paramName] = paramValue;
                     });
 
-                    groupData.push({ modelId, scriptId, useCredentials, parameters });
+                    const modelData = { modelId, scriptId, parameters, useCredentials };
+                    groupData.push(modelData);
                 });
+
+                const logContent = $('#logContent');
+                logContent.empty(); // Limpar logs anteriores
+                logContent.append('Iniciando execução...\n');
 
                 $.ajax({
                     url: '/execute-group-scripts',
                     method: 'POST',
                     contentType: 'application/json',
                     data: JSON.stringify({ groupData }),
-                    success: function (response) {
-                        alert('Scripts executados com sucesso!');
-                        $('#manageModal').modal('hide');
+                    xhrFields: {
+                        onprogress: function (e) {
+                            const newLogs = e.currentTarget.response;
+                            logContent.text(newLogs); // Adicionar logs em tempo real
+                        }
+                    },
+                    success: function () {
+                        logContent.append('Execução concluída.\n');
                     },
                     error: function () {
-                        alert('Erro ao executar scripts.');
+                        logContent.append('Erro ao executar scripts.\n');
                     }
                 });
             });
