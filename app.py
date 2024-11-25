@@ -11,6 +11,7 @@ from cryptography.fernet import Fernet
 import logging, sys
 from datetime import timedelta
 import subprocess
+from flask import Flask, Response, stream_with_context
 
 
 # Inicializa o aplicativo Flask
@@ -78,6 +79,9 @@ def login_required(f):
     return decorated_function
 
 # Rota inicial que redireciona para o login
+
+
+
 @app.route('/')
 def home():
     return redirect(url_for('login'))
@@ -914,11 +918,21 @@ def execute_script(model_name, device_id, script_name):
         if not ip:
             return jsonify({"message": "O campo 'ip' é obrigatório."}), 400
 
-        # Parâmetros opcionais
-        username = data.get("username")
-        senha = data.get("senha")
-        access_type = data.get("access_type")
-        parametros = data.get("parametros", {})
+        # Busca credenciais do dispositivo
+        cursor = mysql.connection.cursor()
+        query = """
+            SELECT username, password, access_type
+            FROM dispositivos
+            WHERE id_dispositivo = %s
+        """
+        cursor.execute(query, (device_id,))
+        device_data = cursor.fetchone()
+
+        if not device_data:
+            return jsonify({"message": "Dispositivo não encontrado."}), 404
+
+        username, password_encrypted, access_type = device_data
+        senha = cipher_suite.decrypt(password_encrypted.encode()).decode() if password_encrypted else None
 
         # Construção do caminho do script
         base_dir = os.path.dirname(__file__)
@@ -930,47 +944,72 @@ def execute_script(model_name, device_id, script_name):
         # Monta o comando base do script
         comando_script = [sys.executable, script_path, '--ip', ip]
 
-        # Adiciona parâmetros opcionais conforme necessário
         if access_type == 'user_password':
-            if username and senha:
-                comando_script += ['--username', username, '--password', senha]
-            else:
-                logging.error("Parâmetros 'username' e 'senha' ausentes para 'user_password'.")
-                return jsonify({
-                    "message": "Os campos 'username' e 'senha' são obrigatórios para o tipo de acesso 'user_password'."
-                }), 400
+            comando_script += ['--username', username, '--password', senha]
         elif access_type == 'password_only':
-            if senha:
-                comando_script += ['--password', senha]
-            else:
-                logging.error("Parâmetro 'senha' ausente para 'password_only'.")
-                return jsonify({
-                    "message": "O campo 'senha' é obrigatório para o tipo de acesso 'password_only'."
-                }), 400
+            comando_script += ['--password', senha]
 
-        # Adiciona outros parâmetros dinâmicos
+        # Adiciona outros parâmetros enviados pelo cliente
+        parametros = data.get("parametros", {})
         for param, value in parametros.items():
             comando_script += [f"--{param}", str(value)]
 
-        # Executa o script e captura stdout/stderr
         logging.info(f"Executando comando: {' '.join(comando_script)}")
+        
+        # Executa o script e captura stdout/stderr
         resultado_execucao = subprocess.run(
-            comando_script, capture_output=True, text=True
+            comando_script,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=os.environ.copy()
         )
 
-        # Verifica a execução do script
+        # Logs detalhados para análise
+        stdout = resultado_execucao.stdout.strip()
+        stderr = resultado_execucao.stderr.strip()
         if resultado_execucao.returncode != 0:
-            logging.error(f"Erro na execução do script: {resultado_execucao.stderr.strip()}")
+            logging.error(f"Erro na execução do script: {stderr}")
             return jsonify({
-                "output": resultado_execucao.stdout.strip(),
-                "error": resultado_execucao.stderr.strip(),
+                "output": stdout,
+                "error": stderr,
                 "command_executed": ' '.join(comando_script),
                 "message": "Erro na execução do script."
             }), 500
+        logging.info(f"stdout: {resultado_execucao.stdout.strip()}")
+        logging.error(f"stderr: {resultado_execucao.stderr.strip()}")  
 
-        # Retorna a saída do script em caso de sucesso
+        # Processa a saída do script
+        if not stdout:
+            return jsonify({"message": "Erro: Saída do script vazia."}), 500
+
+
+        # Verifica se há credenciais novas na saída
+        new_username = None
+        new_password = None
+        if "NEW_CREDENTIALS" in stdout:
+                credentials_part = stdout.split("NEW_CREDENTIALS")[1].strip()
+                credentials = dict(item.split("=") for item in credentials_part.split(","))
+                new_username = credentials.get("username")
+                new_password = credentials.get("password")
+
+        # Atualiza as credenciais no banco
+        if new_password:
+            try:
+                encrypted_password = cipher_suite.encrypt(new_password.encode()).decode()
+                update_query = """
+                    UPDATE dispositivos
+                    SET username = %s, password = %s
+                    WHERE id_dispositivo = %s
+                """
+                cursor.execute(update_query, (new_username or username, encrypted_password, device_id))
+                mysql.connection.commit()
+            except Exception as e:
+                logging.error(f"Erro ao atualizar credenciais no banco: {e}")
+                return jsonify({"message": "Erro ao atualizar credenciais no banco.", "error": str(e)}), 500
+
         return jsonify({
-            "output": resultado_execucao.stdout.strip(),
+            "output": stdout,
             "error": None,
             "command_executed": ' '.join(comando_script),
             "message": "Script executado com sucesso."
@@ -978,11 +1017,7 @@ def execute_script(model_name, device_id, script_name):
 
     except Exception as e:
         logging.exception("Erro inesperado ao tentar executar o script.")
-        return jsonify({
-            "message": "Erro inesperado ao tentar executar o script.",
-            "error": str(e)
-        }), 500
-
+        return jsonify({"message": "Erro inesperado ao tentar executar o script.", "error": str(e)}), 500
 
 
 # Rota para gerenciar dispositivos
@@ -1152,93 +1187,101 @@ def upload_script():
 @app.route('/execute-group-scripts', methods=['POST'])
 @login_required
 def execute_group_scripts():
-    """
-    Rota para executar scripts selecionados para dispositivos de diferentes modelos em um grupo.
-    """
     try:
         data = request.json
         group_data = data.get('groupData', [])
-
         if not group_data:
             return jsonify({"error": "Nenhum dado fornecido para execução."}), 400
 
-        results = []
+        def generate_logs():
+            for group in group_data:
+                model_id = group.get("modelId")
+                script_id = group.get("scriptId")
+                use_credentials = group.get("useCredentials", False)
+                parameters = group.get("parameters", {})
 
-        for group in group_data:
-            model_id = group.get("modelId")
-            script_id = group.get("scriptId")
-            use_credentials = group.get("useCredentials", False)
-            parameters = group.get("parameters", {})
+                # Buscar informações do script e do modelo
+                cursor = mysql.connection.cursor()
+                cursor.execute("""
+                    SELECT s.nome, m.nome AS modelo_nome
+                    FROM Scripts s
+                    JOIN modelo m ON s.id_modelo = m.id_modelo
+                    WHERE s.id_script = %s
+                """, (script_id,))
+                script = cursor.fetchone()
 
-            # Obter detalhes do script
-            cursor = mysql.connection.cursor()
-            cursor.execute("""
-                SELECT s.nome, m.nome AS modelo_nome
-                FROM Scripts s
-                JOIN modelo m ON s.id_modelo = m.id_modelo
-                WHERE s.id_script = %s
-            """, (script_id,))
-            script = cursor.fetchone()
+                if not script:
+                    error_message = f"Erro: Script ID {script_id} não encontrado.\n"
+                    logging.error(error_message.strip())  # Log detalhado no terminal
+                    yield f"Erro ao executar script.\n"  # Mensagem simplificada para o frontend
+                    continue
 
-            if not script:
-                results.append({"modelId": model_id, "error": "Script não encontrado."})
-                continue
+                script_name, model_name = script
 
-            script_name, model_name = script
+                cursor.execute("""
+                    SELECT d.ip, d.username, d.password, d.access_type
+                    FROM dispositivos d
+                    WHERE d.id_modelo = %s
+                """, (model_id,))
+                dispositivos = cursor.fetchall()
+                cursor.close()
 
-            # Obter dispositivos associados ao modelo
-            cursor.execute("""
-                SELECT d.ip, d.username, d.password, d.access_type
-                FROM dispositivos d
-                WHERE d.id_modelo = %s
-            """, (model_id,))
-            dispositivos = cursor.fetchall()
-            cursor.close()
+                for dispositivo in dispositivos:
+                    ip, username, encrypted_password, access_type = dispositivo
+                    password = decrypt_password(encrypted_password) if encrypted_password else None
 
-            # Executar script para cada dispositivo
-            for dispositivo in dispositivos:
-                ip, username, encrypted_password, access_type = dispositivo
-                password = decrypt_password(encrypted_password) if encrypted_password else None
+                    # Montar comando de execução
+                    base_dir = os.path.dirname(__file__)
+                    script_path = os.path.join(base_dir, 'scripts', model_name, script_name)
+                    command = [sys.executable, script_path, '--ip', ip]
 
-                # Construir comando do script
-                base_dir = os.path.dirname(__file__)
-                script_path = os.path.join(base_dir, 'scripts', model_name, script_name)
-                command = [sys.executable, script_path, '--ip', ip]
+                    if use_credentials and access_type == 'user_password':
+                        command += ['--username', username, '--password', password]
+                    elif not use_credentials:
+                        command += ['--password', password]
 
-                if use_credentials and access_type == 'user_password':
-                    command += ['--username', username, '--password', password]
+                    for param, value in parameters.items():
+                        command += [f"--{param}", str(value)]
 
-                for param, value in parameters.items():
-                    command += [f"--{param}", str(value)]
+                    # Logs detalhados para o terminal
+                    logging.info(
+                        f"Processando: Model ID={model_id}, Script ID={script_id}, "
+                        f"Use Credentials={use_credentials}, Parameters={parameters}"
+                    )
+                    logging.info(f"Executando comando: {' '.join(command)}")
 
-                # Executar script
-                result = subprocess.run(command, capture_output=True, text=True)
+                    # Executar script
+                    yield f"Executando script '{script_name}' no dispositivo {ip}...\n"
+                    result = subprocess.run(command, capture_output=True, text=True)
 
-                if result.returncode == 0:
-                    results.append({
-                        "modelId": model_id,
-                        "deviceIp": ip,
-                        "output": result.stdout.strip()
-                    })
-                else:
-                    results.append({
-                        "modelId": model_id,
-                        "deviceIp": ip,
-                        "error": result.stderr.strip()
-                    })
+                    if result.returncode == 0:
+                        success_message = f"Sucesso no dispositivo {ip}:\n{result.stdout.strip()}\n"
+                        logging.info(success_message.strip())  # Log detalhado no terminal
+                        yield success_message  # Enviado ao frontend
+                    else:
+                        error_message = f"Erro no dispositivo {ip}:\n{result.stderr.strip()}\n"
+                        logging.error(error_message.strip())  # Log detalhado no terminal
+                        yield error_message  # Enviado ao frontend
 
-        return jsonify({"results": results})
+        return Response(stream_with_context(generate_logs()), content_type='text/plain')
 
     except Exception as e:
-        return jsonify({"error": f"Erro ao executar scripts: {str(e)}"}), 500
+        logging.exception("Erro inesperado durante a execução dos scripts.")
+        return jsonify({"error": f"Erro inesperado: {str(e)}"}), 500
+
+
+
+
+
+
+
+
 
 
 @app.route('/get-group-scripts/<string:group_name>', methods=['GET'])
 @login_required
 def get_group_scripts(group_name):
-    """
-    Rota para obter scripts e dispositivos relacionados a um grupo.
-    """
+    logging.info(f"Carregando scripts para o grupo: {group_name}")
     try:
         cursor = mysql.connection.cursor()
 
@@ -1250,8 +1293,10 @@ def get_group_scripts(group_name):
             WHERE g.nome = %s
         """, (group_name,))
         dispositivos = cursor.fetchall()
+        logging.debug(f"Dispositivos encontrados para o grupo '{group_name}': {dispositivos}")
 
         if not dispositivos:
+            logging.warning(f"Nenhum dispositivo encontrado para o grupo '{group_name}'")
             return jsonify({"error": "Nenhum dispositivo encontrado para este grupo."}), 404
 
         modelos = {}
@@ -1274,6 +1319,8 @@ def get_group_scripts(group_name):
                 WHERE s.id_modelo = %s
             """, (modelo_id,))
             scripts = cursor.fetchall()
+            logging.debug(f"Scripts para o modelo '{modelo_id}': {scripts}")
+
             script_data = {}
             for script_id, script_name, param_name, param_desc in scripts:
                 if script_id not in script_data:
@@ -1286,10 +1333,12 @@ def get_group_scripts(group_name):
             modelos[modelo_id]["scripts"] = list(script_data.values())
 
         cursor.close()
+        logging.info(f"Dados carregados com sucesso para o grupo '{group_name}': {modelos}")
         return jsonify({"models": list(modelos.values())})
-
     except Exception as e:
+        logging.error(f"Erro ao carregar scripts para o grupo '{group_name}': {str(e)}")
         return jsonify({"error": f"Erro ao carregar dados do grupo: {str(e)}"}), 500
+
 
 
 # Tratamento de erro 404
