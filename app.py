@@ -35,7 +35,7 @@ def decrypt_password(encrypted_password):
 # Configuração para conexão com o banco de dados MySQL
 app.config['MYSQL_HOST'] = "localhost"
 app.config['MYSQL_USER'] = "root"
-app.config['MYSQL_PASSWORD'] = "root"
+app.config['MYSQL_PASSWORD'] = "admin"
 app.config['MYSQL_DB'] = "segura"
 
 # Inicializa a conexão com o MySQL
@@ -1182,6 +1182,83 @@ def upload_script():
         return redirect(url_for('upload_script'))
 
     return render_template('upload_script.html', router_models=modelos_com_pasta)
+
+
+@app.route('/deletescript', methods=['GET', 'POST'])
+def delete_script():
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    scripts_path = os.path.join(base_dir, 'scripts')
+
+    if request.method == 'POST':
+        script_id = request.json.get('script_id')
+        if not script_id:
+            return jsonify({'success': False, 'message': 'ID do script não fornecido.'}), 400
+
+        cursor = mysql.connection.cursor()
+        try:
+            # Buscar detalhes do script no banco de dados
+            cursor.execute("SELECT nome, id_modelo FROM scripts WHERE id_script = %s", (script_id,))
+            script_info = cursor.fetchone()
+            if not script_info:
+                return jsonify({'success': False, 'message': 'Script não encontrado.'}), 404
+
+            script_name, model_id = script_info
+
+            # Remover o arquivo do sistema de arquivos
+            cursor.execute("SELECT nome FROM modelo WHERE id_modelo = %s", (model_id,))
+            model_name = cursor.fetchone()[0]
+            if model_name:
+                script_file_path = os.path.join(scripts_path, model_name, script_name)
+                if os.path.exists(script_file_path):
+                    os.remove(script_file_path)
+
+            # Deletar script e parâmetros do banco de dados
+            cursor.execute("DELETE FROM parametros_scripts WHERE id_script = %s", (script_id,))
+            cursor.execute("DELETE FROM scripts WHERE id_script = %s", (script_id,))
+            mysql.connection.commit()
+
+            return jsonify({'success': True, 'message': f"Script '{script_name}' excluído com sucesso."}), 200
+        except Exception as e:
+            mysql.connection.rollback()
+            return jsonify({'success': False, 'message': f"Erro ao excluir o script: {str(e)}"}), 500
+        finally:
+            cursor.close()
+
+    # Listar todos os scripts com parâmetros agrupados
+    cursor = mysql.connection.cursor()
+    try:
+        cursor.execute("""
+            SELECT s.id_script, s.nome AS script_name, s.descricao AS script_description, 
+                   m.nome AS model_name, 
+                   GROUP_CONCAT(p.nome_parametro ORDER BY p.nome_parametro SEPARATOR ', ') AS parametros
+            FROM scripts s
+            JOIN modelo m ON s.id_modelo = m.id_modelo
+            LEFT JOIN parametros_scripts p ON s.id_script = p.id_script
+            GROUP BY s.id_script, m.nome
+            ORDER BY m.nome, s.nome
+        """)
+        scripts = cursor.fetchall()
+    finally:
+        cursor.close()
+
+    # Transformar os dados em uma estrutura utilizável pelo template
+    agrupados = {}
+    for script in scripts:
+        model_name = script[3]
+        if model_name not in agrupados:
+            agrupados[model_name] = {'nome_modelo': model_name, 'scripts': []}
+        agrupados[model_name]['scripts'].append({
+            'id': script[0],
+            'nome': script[1],
+            'descricao': script[2],
+            'parametros': script[4] if script[4] else 'Nenhum parâmetro'
+        })
+
+    return render_template('delete_script.html', agrupados=agrupados.values(), modelos=[(m[0], m[1]) for m in agrupados])
+
+
+
+
 
 
 @app.route('/execute-group-scripts', methods=['POST'])

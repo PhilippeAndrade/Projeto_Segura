@@ -13,6 +13,7 @@
             min-height: 100vh;
             background-color: #f8f9fa;
             margin: 0;
+            overflow-x: hidden;
         }
         .sidebar {
             width: 250px;
@@ -56,19 +57,24 @@
             z-index: 1100;
             transition: color 0.3s ease;
         }
-        .sidebar.show + #sidebarToggle {
+        .sidebar.show #sidebarToggle {
             color: white;
         }
         .content {
             flex-grow: 1;
-            padding: 30px;
+            padding: 20px;
             margin-left: 250px;
             transition: margin-left 0.3s ease;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            width: 100%;
         }
         @media (max-width: 768px) {
             .content {
                 margin-left: 0;
-                padding-top: 50px;
+                padding: 15px;
+                padding-top: 60px;
             }
             .sidebar {
                 left: -250px;
@@ -79,30 +85,28 @@
             }
         }
         .form-container {
-            max-width: 900px;
-            margin: auto;
-            background: #ffffff;
+            max-width: 800px;
+            width: 100%;
+            background-color: white;
             padding: 30px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            text-align: center;
+        }
+        .form-group {
+            margin-bottom: 1rem;
         }
         .table-container {
             margin-top: 20px;
-            border: 1px solid #dee2e6;
-            border-radius: 5px;
             overflow-x: auto;
+            border-radius: 5px;
         }
         .table {
-            margin: 0;
-            background-color: #ffffff;
+            font-size: 0.9rem;
+            width: 100%;
         }
         .modal-body {
             max-height: 400px;
             overflow-y: auto;
-        }
-        .parameters input {
-            margin-bottom: 10px;
         }
         #logContainer {
             background: #f8f9fa;
@@ -118,19 +122,18 @@
             word-wrap: break-word;
         }
         #clearLogs {
-            margin-top: 10px; /* Espaçamento acima */
-            margin-bottom: 15px; /* Espaçamento abaixo */
-            display: block; /* Ocupa toda a linha */
+            margin-top: 10px;
+            margin-bottom: 15px;
+            display: block;
             background-color: #6c757d;
             border: none;
             color: white;
             text-align: center;
-            width: 150px; /* Aumenta a largura */
-            height: 40px; /* Opcional: aumenta a altura */
-            font-size: 16px; /* Opcional: aumenta o tamanho do texto */
-            border-radius: 5px; /* Opcional: deixa os cantos arredondados */
+            width: 150px;
+            height: 40px;
+            font-size: 16px;
+            border-radius: 5px;
         }
-
         #clearLogs:hover {
             background-color: #5a6268;
         }
@@ -194,7 +197,6 @@
         </div>
     </div>
 
-    <!-- Modal -->
     <div class="modal fade" id="manageModal" tabindex="-1" role="dialog" aria-labelledby="manageModalLabel" aria-hidden="true">
         <div class="modal-dialog modal-lg" role="document">
             <div class="modal-content">
@@ -221,13 +223,11 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function () {
-            // Sidebar toggle
             $('#sidebarToggle').click(function () {
                 $('.sidebar').toggleClass('show');
                 $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
             });
 
-            // Abrir modal para gerenciar grupo
             $(document).on('click', '.manage-group', function () {
                 const groupName = $(this).data('group');
                 $.ajax({
@@ -264,34 +264,30 @@
                 });
             });
 
-            // Atualizar parâmetros ao selecionar script
-$(document).on('change', '.script-select', function () {
-    const modelId = $(this).data('model');
-    const scriptId = $(this).val();
-    const parametersDiv = $(`#parameters${modelId}`);
-    parametersDiv.empty();
+            $(document).on('change', '.script-select', function () {
+                const modelId = $(this).data('model');
+                const scriptId = $(this).val();
+                const parametersDiv = $(`#parameters${modelId}`);
+                parametersDiv.empty();
 
-    const selectedScript = $(this).find(`option[value="${scriptId}"]`).data('script-info');
+                const selectedScript = $(this).find(`option[value="${scriptId}"]`).data('script-info');
 
-    if (selectedScript && selectedScript.parameters) {
-        selectedScript.parameters.forEach(param => {
-            parametersDiv.append(`
-                <div class="form-group">
-                    <label>${param.name} - ${param.description}:</label>
-                    <input type="text" class="form-control mb-2" data-param="${param.name}" placeholder="Digite o valor">
-                </div>
-            `);
-        });
-    }
-});
+                if (selectedScript && selectedScript.parameters) {
+                    selectedScript.parameters.forEach(param => {
+                        parametersDiv.append(`
+                            <div class="form-group">
+                                <label>${param.name} - ${param.description}:</label>
+                                <input type="text" class="form-control mb-2" data-param="${param.name}" placeholder="Digite o valor">
+                            </div>
+                        `);
+                    });
+                }
+            });
 
-
-            // Limpar logs
             $('#clearLogs').click(function () {
                 $('#logContent').empty();
             });
 
-            // Executar scripts do grupo
             $('#executeGroupScripts').click(function () {
                 const groupData = [];
                 $('.model-section').each(function () {
@@ -311,7 +307,7 @@ $(document).on('change', '.script-select', function () {
                 });
 
                 const logContent = $('#logContent');
-                logContent.empty(); // Limpar logs anteriores
+                logContent.empty();
                 logContent.append('Iniciando execução...\n');
 
                 $.ajax({
@@ -322,7 +318,7 @@ $(document).on('change', '.script-select', function () {
                     xhrFields: {
                         onprogress: function (e) {
                             const newLogs = e.currentTarget.response;
-                            logContent.text(newLogs); // Adicionar logs em tempo real
+                            logContent.text(newLogs);
                         }
                     },
                     success: function () {
