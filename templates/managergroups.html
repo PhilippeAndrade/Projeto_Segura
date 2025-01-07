@@ -158,6 +158,7 @@
     <div class="content">
         <div class="form-container">
             <h2 class="text-center mb-4">Gerenciar Grupos</h2>
+            <!-- Filtro de grupos -->
             <div class="form-group">
                 <label for="groupFilter">Selecionar Grupo:</label>
                 <select id="groupFilter" class="form-control">
@@ -183,8 +184,8 @@
                         {% for dispositivo in dispositivos %}
                         <tr>
                             <td>{{ dispositivo[1] }}</td>
-                            <td>{{ dispositivo[2] }}</td>
-                            <td>{{ dispositivo[3] }}</td>
+                            <td>{{ dispositivo[2] or "N/A" }}</td>
+                            <td>{{ dispositivo[3] or "N/A" }}</td>
                             <td>{{ dispositivo[5] }}</td>
                             <td>
                                 <button class="btn btn-warning manage-group" data-group="{{ dispositivo[3] }}">Gerenciar</button>
@@ -223,11 +224,48 @@
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
         $(document).ready(function () {
+            // Toggle Sidebar
             $('#sidebarToggle').click(function () {
                 $('.sidebar').toggleClass('show');
                 $(this).css('color', $('.sidebar').hasClass('show') ? 'white' : '#343a40');
             });
 
+            // Filtrar dispositivos por grupo
+            $('#groupFilter').on('change', function () {
+                const groupId = $(this).val();
+
+                $.ajax({
+                    url: '/managergroups',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ group_id: groupId }),
+                    success: function (response) {
+                        const tbody = $('#deviceTableBody');
+                        tbody.empty();
+
+                        response.devices.forEach(device => {
+                            tbody.append(`
+                                <tr>
+                                    <td>${device.nome}</td>
+                                    <td>${device.modelo_nome}</td>
+                                    <td>${device.grupo_nome}</td>
+                                    <td>${device.ip}</td>
+                                    <td>
+                                        <button class="btn btn-warning manage-group" data-group="${device.grupo_nome}">
+                                            Gerenciar
+                                        </button>
+                                    </td>
+                                </tr>
+                            `);
+                        });
+                    },
+                    error: function () {
+                        alert('Erro ao buscar dispositivos filtrados.');
+                    }
+                });
+            });
+
+            // Gerenciar grupo ao clicar no botão
             $(document).on('click', '.manage-group', function () {
                 const groupName = $(this).data('group');
                 $.ajax({
@@ -264,6 +302,7 @@
                 });
             });
 
+            // Atualizar parâmetros ao selecionar um script
             $(document).on('change', '.script-select', function () {
                 const modelId = $(this).data('model');
                 const scriptId = $(this).val();
@@ -284,10 +323,12 @@
                 }
             });
 
+            // Limpar logs
             $('#clearLogs').click(function () {
                 $('#logContent').empty();
             });
 
+            // Executar scripts para o grupo
             $('#executeGroupScripts').click(function () {
                 const groupData = [];
                 $('.model-section').each(function () {
