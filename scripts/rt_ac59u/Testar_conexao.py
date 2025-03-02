@@ -13,7 +13,7 @@ logging.basicConfig(
     format="%(asctime)s - %(levelname)s - %(message)s",
 )
 
-def main(ip,password):
+def main(ip,username, password):
     """Função principal para acessar o roteador."""
     # Configurações do ChromeDriver em modo headless
     options = webdriver.ChromeOptions()
@@ -37,7 +37,7 @@ def main(ip,password):
         # Espera até que o logo do roteador esteja visível
         WebDriverWait(driver, 60).until(
             EC.presence_of_element_located(
-                (By.XPATH, "//img[contains(@src, 'themes/mercury/img/logo-icon.png')]")
+                (By.XPATH, "/html/body/form/div/div/div[1]/div[2]")
             )
         )
         logging.info("Página carregada com sucesso.")
@@ -54,14 +54,15 @@ def main(ip,password):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Teste de conexão com o roteador.")
-    parser.add_argument("--ip",required=False,)
-    parser.add_argument("--password", required=True, help="Senha de administrador do roteador")
+    parser.add_argument("--ip",required=True,)
+    parser.add_argument("--username",required=False)
+    parser.add_argument("--password", required=False, help="Senha de administrador do roteador")
     args = parser.parse_args()
 
     ip_do_roteador = args.ip
 
     # Recebe o resultado da função main
-    resultado = main(args.ip, args.password)
+    resultado = main(args.ip,args.username ,args.password)
 
     # Exibe o resultado no terminal
     print(resultado)

@@ -1296,7 +1296,7 @@ def execute_group_scripts():
                 script_name, model_name = script
 
                 cursor.execute("""
-                    SELECT d.ip, d.username, d.password, d.access_type
+                    SELECT d.id_dispositivo, d.ip, d.username, d.password, d.access_type
                     FROM dispositivos d
                     WHERE d.id_modelo = %s
                 """, (model_id,))
@@ -1304,7 +1304,7 @@ def execute_group_scripts():
                 cursor.close()
 
                 for dispositivo in dispositivos:
-                    ip, username, encrypted_password, access_type = dispositivo
+                    device_id, ip, username, encrypted_password, access_type = dispositivo
                     password = decrypt_password(encrypted_password) if encrypted_password else None
 
                     # Montar comando de execução
@@ -1335,6 +1335,34 @@ def execute_group_scripts():
                         success_message = f"Sucesso no dispositivo {ip}:\n{result.stdout.strip()}\n"
                         logging.info(success_message.strip())  # Log detalhado no terminal
                         yield success_message  # Enviado ao frontend
+
+                        # Verificar se há novas credenciais na saída do script
+                        stdout = result.stdout
+                        new_username = None
+                        new_password = None
+                        if "NEW_CREDENTIALS" in stdout:
+                            credentials_part = stdout.split("NEW_CREDENTIALS")[1].strip()
+                            credentials = dict(item.split("=") for item in credentials_part.split(","))
+                            new_username = credentials.get("username")
+                            new_password = credentials.get("password")
+
+                        # Atualizar as credenciais no banco de dados, se necessário
+                        if new_password:
+                            try:
+                                encrypted_password = cipher_suite.encrypt(new_password.encode()).decode()
+                                update_query = """
+                                    UPDATE dispositivos
+                                    SET username = %s, password = %s
+                                    WHERE id_dispositivo = %s
+                                """
+                                cursor = mysql.connection.cursor()
+                                cursor.execute(update_query, (new_username or username, encrypted_password, device_id))
+                                mysql.connection.commit()
+                                cursor.close()
+                                yield f"Credenciais atualizadas para o dispositivo {ip}.\n"
+                            except Exception as e:
+                                logging.error(f"Erro ao atualizar credenciais no banco: {e}")
+                                yield f"Erro ao atualizar credenciais no banco para o dispositivo {ip}.\n"
                     else:
                         error_message = f"Erro no dispositivo {ip}:\n{result.stderr.strip()}\n"
                         logging.error(error_message.strip())  # Log detalhado no terminal
@@ -1345,8 +1373,6 @@ def execute_group_scripts():
     except Exception as e:
         logging.exception("Erro inesperado durante a execução dos scripts.")
         return jsonify({"error": f"Erro inesperado: {str(e)}"}), 500
-
-
 
 
 

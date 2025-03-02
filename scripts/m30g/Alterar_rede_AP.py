@@ -13,8 +13,7 @@ def configurar_rede(ip, password, ssid1, senha1, ssid2, senha2):
     # Configurar o WebDriver
     service = Service(ChromeDriverManager().install())
     driver = webdriver.Chrome(service=service)
-
-        
+    
         # Acessa a página de login do roteador
     driver.get(f"http://{ip}")
 
@@ -37,7 +36,7 @@ def configurar_rede(ip, password, ssid1, senha1, ssid2, senha2):
             
                 # Localiza o campo de SSID 2.4GHz
         nomerede1 = WebDriverWait(driver, 30).until(
-            EC.presence_of_element_located((By.XPATH, "/html/body/div[1]/div/div[1]/div/div[2]/div[2]/div/div[2]/div[1]/div[3]/div[1]/div[2]/div[2]/div[2]/div[5]/div[2]/div[1]/div[2]/div[1]/span[2]/input"))
+            EC.presence_of_element_located((By.XPATH, "(//label[text()='Nome de Rede (SSID)']/../../..//input)[1]"))
         )
         driver.execute_script("arguments[0].scrollIntoView(true);", nomerede1)
         nomerede1.clear()
