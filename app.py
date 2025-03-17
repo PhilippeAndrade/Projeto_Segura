@@ -1022,7 +1022,7 @@ def execute_script(model_name, device_id, script_name):
 
 # Rota para gerenciar dispositivos
 @app.route('/managerdevices', methods=['GET', 'POST'])
-
+@login_required
 def manager_devices():
     if request.method == 'POST':
         # Recebe o `group_id` e `nome_dispositivo` via JSON no corpo da requisição
