@@ -105,7 +105,6 @@ def login():
         
         if bd_password:  # Se o usuário foi encontrado
             senha_hashed = bd_password[0]  # Extrai o hash da senha
-            print(f'Senha digitada: {password}')  # Exibe a senha para depuração (remover em produção)
             print(f'Senha hash armazenada: {senha_hashed}')  # Exibe o hash para depuração
             
             # Verifica se a senha fornecida corresponde ao hash
