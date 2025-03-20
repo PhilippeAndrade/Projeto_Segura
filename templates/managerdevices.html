@@ -308,6 +308,9 @@
     
             // Executar o script selecionado com parâmetros
             $('#executeScriptBtn').click(function() {
+                const outputPre = $('#scriptOutput pre');
+                $('#scriptOutput').show();
+                outputPre.text('Iniciando execução...\n');
                 const modelName = $(this).data('modelName');
                 const deviceId = $(this).data('deviceId');
                 const scriptName = $(this).data('scriptName');
